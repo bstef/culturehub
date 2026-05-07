@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>(function(){var t=localStorage.getItem("culturehub_theme")||"dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CultureHub — Gallery</title>
+<link rel="stylesheet" href="style.css"/>
+<style>
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .photo-item {
+    position: relative; aspect-ratio: 1;
+    border-radius: var(--radius-sm); overflow: hidden;
+    border: 1px solid var(--border); cursor: pointer;
+    background: var(--bg3);
+    transition: transform 0.2s, box-shadow 0.2s;
+    group: true;
+  }
+  .photo-item:hover { transform: scale(1.02); box-shadow: var(--shadow); }
+  .photo-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo-item .photo-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%);
+    opacity: 0; transition: opacity 0.2s;
+    display: flex; flex-direction: column; justify-content: flex-end; padding: 10px;
+  }
+  .photo-item:hover .photo-overlay { opacity: 1; }
+  .photo-item .photo-caption { color: #fff; font-size: 0.78rem; font-weight: 500; }
+  .photo-item .photo-del {
+    position: absolute; top: 6px; right: 6px;
+    background: rgba(0,0,0,0.6); border: none; color: #fff;
+    border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 0.8rem;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .photo-item:hover .photo-del { opacity: 1; }
+
+  /* Slideshow */
+  .slideshow-overlay {
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,0.95);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    animation: fadeIn 0.2s ease;
+  }
+  .slideshow-img {
+    max-width: 90vw; max-height: 75vh;
+    object-fit: contain; border-radius: 12px;
+    animation: zoomIn 0.3s ease;
+  }
+  @keyframes zoomIn { from{transform:scale(0.9);opacity:0} to{transform:scale(1);opacity:1} }
+  .slide-controls {
+    display: flex; align-items: center; gap: 24px;
+    margin-top: 20px; padding: 0 40px;
+  }
+  .slide-btn {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    color: #fff; font-size: 1.4rem; cursor: pointer;
+    transition: background 0.15s; display: flex; align-items: center; justify-content: center;
+  }
+  .slide-btn:hover { background: rgba(255,255,255,0.2); }
+  .slide-dots { display: flex; gap: 6px; }
+  .slide-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(255,255,255,0.3); cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .slide-dot.active { background: #fff; transform: scale(1.3); }
+
+  /* Upload zone */
+  .upload-zone {
+    border: 2px dashed var(--border2); border-radius: var(--radius);
+    padding: 32px; text-align: center; cursor: pointer;
+    transition: all 0.2s; color: var(--text2);
+  }
+  .upload-zone:hover, .upload-zone.drag-over { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+</style>
+</head>
+<body>
+<div id="nav-root"></div>
+<div id="slideshow-root"></div>
+<main class="page" id="root"></main>
+
+<script src="data.js"></script>
+<script src="utils.js"></script>
+<script>
+document.getElementById('nav-root').innerHTML = navHTML();
+setActiveNav();
+
+const urlParams = new URLSearchParams(location.search);
+let selectedEventId = urlParams.get('event') || null;
+let slideIdx = 0;
+let slideshowImages = [];
+
+// ── Slideshow ────────────────────────────────────────────────────────────────
+function openSlideshow(images, startIdx = 0) {
+  slideshowImages = images;
+  slideIdx = startIdx;
+  renderSlideshow();
+}
+
+function renderSlideshow() {
+  const root = document.getElementById('slideshow-root');
+  if (!slideshowImages.length) { root.innerHTML = ''; return; }
+  const img = slideshowImages[slideIdx];
+  root.innerHTML = `
+    <div class="slideshow-overlay" id="ss-overlay" onclick="closeSlideshow(event)">
+      <div style="text-align:right;width:90vw;margin-bottom:8px">
+        <button onclick="closeSlideshow()" style="background:rgba(255,255,255,0.1);border:none;color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:0.9rem">✕ Close</button>
+      </div>
+      <img class="slideshow-img" src="${img.url}" alt="${img.caption||''}"/>
+      ${img.caption ? `<div style="color:rgba(255,255,255,0.7);margin-top:10px;font-size:0.9rem">${img.caption}</div>` : ''}
+      <div class="slide-controls">
+        <button class="slide-btn" onclick="prevSlide()">◀</button>
+        <div class="slide-dots">
+          ${slideshowImages.map((_, i) => `
+            <div class="slide-dot ${i===slideIdx?'active':''}" onclick="goSlide(${i})"></div>`).join('')}
+        </div>
+        <button class="slide-btn" onclick="nextSlide()">▶</button>
+      </div>
+      <div style="color:rgba(255,255,255,0.4);font-size:0.8rem;margin-top:8px">${slideIdx+1} / ${slideshowImages.length}</div>
+    </div>
+  `;
+}
+
+function closeSlideshow(e) {
+  if (e && e.target !== document.getElementById('ss-overlay') && !e.target.classList.contains('slide-btn')) return;
+  slideshowImages = [];
+  document.getElementById('slideshow-root').innerHTML = '';
+}
+function nextSlide() { slideIdx = (slideIdx + 1) % slideshowImages.length; renderSlideshow(); }
+function prevSlide() { slideIdx = (slideIdx - 1 + slideshowImages.length) % slideshowImages.length; renderSlideshow(); }
+function goSlide(i) { slideIdx = i; renderSlideshow(); }
+
+// Keyboard nav
+document.addEventListener('keydown', e => {
+  if (!slideshowImages.length) return;
+  if (e.key === 'ArrowRight') nextSlide();
+  if (e.key === 'ArrowLeft') prevSlide();
+  if (e.key === 'Escape') { slideshowImages = []; document.getElementById('slideshow-root').innerHTML = ''; }
+});
+
+// ── Upload ────────────────────────────────────────────────────────────────────
+function handleFiles(files, eventId) {
+  const imgs = Array.from(files).filter(f => f.type.startsWith('image/'));
+  if (!imgs.length) { toast('No image files found', 'error'); return; }
+  imgs.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      CH.addGalleryImage(eventId, e.target.result, '');
+      toast('Photo added!', 'success');
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function setupDropZone(el, eventId) {
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
+  el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+  el.addEventListener('drop', e => {
+    e.preventDefault(); el.classList.remove('drag-over');
+    handleFiles(e.dataTransfer.files, eventId);
+  });
+  el.addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file'; input.multiple = true; input.accept = 'image/*';
+    input.onchange = () => handleFiles(input.files, eventId);
+    input.click();
+  });
+}
+
+async function deletePhoto(eventId, imgId) {
+  CH.removeGalleryImage(eventId, imgId);
+  toast('Photo removed', 'info');
+  render();
+}
+
+function renderEventGallery(event) {
+  const hasPhotos = event.gallery.length > 0;
+  const uploadId = `upload-${event.id}`;
+  return `
+    <div class="card" style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div>
+          <div class="card-title" style="margin:0">${event.title}</div>
+          <div style="font-size:0.8rem;color:var(--text2);margin-top:2px">${fmtDate(event.date)} · ${event.gallery.length} photo${event.gallery.length===1?'':'s'}</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          ${hasPhotos ? `<button class="btn btn-secondary btn-sm" onclick="openSlideshow(${JSON.stringify(event.gallery)},0)">▶ Slideshow</button>` : ''}
+          <label class="btn btn-primary btn-sm" style="cursor:pointer">
+            📷 Add Photos
+            <input type="file" multiple accept="image/*" style="display:none" onchange="handleFiles(this.files,'${event.id}')"/>
+          </label>
+        </div>
+      </div>
+
+      ${!hasPhotos ?
+        `<div class="upload-zone" id="${uploadId}">
+          <div style="font-size:2.5rem;margin-bottom:8px">📷</div>
+          <div style="font-weight:600">Drop photos here or click to upload</div>
+          <div style="font-size:0.8rem;margin-top:4px">Supports JPG, PNG, GIF, WebP</div>
+        </div>` :
+        `<div class="photo-grid">
+          ${event.gallery.map((img, i) => `
+          <div class="photo-item" onclick="openSlideshow(${JSON.stringify(event.gallery)},${i})">
+            <img src="${img.url}" alt="${img.caption||''}" loading="lazy"/>
+            <div class="photo-overlay">
+              ${img.caption ? `<span class="photo-caption">${img.caption}</span>` : ''}
+            </div>
+            <button class="photo-del" onclick="event.stopPropagation();deletePhoto('${event.id}','${img.id}')">🗑</button>
+          </div>`).join('')}
+          <div class="upload-zone" id="${uploadId}" style="aspect-ratio:1;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+            <span style="font-size:1.8rem">➕</span>
+            <span style="font-size:0.8rem">Add photos</span>
+          </div>
+        </div>`
+      }
+    </div>
+  `;
+}
+
+function render() {
+  const events = CH.getEvents().sort((a,b) => (b.date||'') > (a.date||'') ? 1 : -1);
+  const displayEvents = selectedEventId ? events.filter(e => e.id === selectedEventId) : events;
+  const totalPhotos = events.reduce((s,e) => s + e.gallery.length, 0);
+
+  document.getElementById('root').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">🖼 <span>Gallery</span></div>
+        <div class="page-subtitle">${totalPhotos} photos across ${events.length} events</div>
+      </div>
+      ${selectedEventId ? `<a href="gallery.html" class="btn btn-secondary">← All Events</a>` : ''}
+    </div>
+
+    <!-- Event filter -->
+    ${!selectedEventId && events.length > 1 ? `
+    <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap">
+      ${events.map(ev => `
+        <button class="btn btn-sm btn-ghost" onclick="selectedEventId='${ev.id}';render()">
+          ${ev.title} <span class="badge badge-gray" style="margin-left:4px">${ev.gallery.length}</span>
+        </button>`).join('')}
+    </div>` : ''}
+
+    ${displayEvents.length === 0 ?
+      `<div class="empty-state">
+        <span class="empty-icon">🖼</span>
+        <h3>No events yet</h3>
+        <p>Create events to add photo galleries!</p>
+        <a href="events.html" class="btn btn-primary" style="margin-top:16px">+ Create Event</a>
+      </div>` :
+      displayEvents.map(ev => renderEventGallery(ev)).join('')
+    }
+  `;
+
+  // Setup all drop zones after render
+  setTimeout(() => {
+    displayEvents.forEach(ev => {
+      const el = document.getElementById(`upload-${ev.id}`);
+      if (el) setupDropZone(el, ev.id);
+    });
+  }, 50);
+}
+
+window.addEventListener('culturehub:updated', render);
+render();
+</script>
+</body>
+</html>

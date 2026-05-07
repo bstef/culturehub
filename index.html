@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>(function(){var t=localStorage.getItem("culturehub_theme")||"dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CultureHub — Home</title>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div id="nav-root"></div>
+
+<main class="page" id="root"></main>
+
+<script src="data.js"></script>
+<script src="utils.js"></script>
+<script>
+document.getElementById('nav-root').innerHTML = navHTML();
+setActiveNav();
+
+function render() {
+  const events = CH.getEvents();
+  const people = CH.getPeople();
+  const lb = CH.getLeaderboard();
+  const s = CH.getSettings();
+
+  const upcoming = events.filter(e => isUpcoming(e.date)).sort((a,b) => a.date > b.date ? 1 : -1);
+  const recent = events.filter(e => !isUpcoming(e.date)).sort((a,b) => a.date < b.date ? 1 : -1).slice(0,3);
+  const totalPts = lb.reduce((s,e) => s + e.points, 0);
+  const topPerson = lb[0];
+
+  document.getElementById('root').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Welcome to <span>${s.orgName || 'CultureHub'}</span> 🎯</div>
+        <div class="page-subtitle">Track, celebrate, and reward your team culture</div>
+      </div>
+      <div class="flex gap-2">
+        <a href="events.html" class="btn btn-primary">+ New Event</a>
+        <a href="dashboard.html" class="btn btn-secondary">📺 TV Dashboard</a>
+      </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid-4" style="margin-bottom:32px">
+      <div class="stat-card accent">
+        <div class="stat-label">Total People</div>
+        <div class="stat-value">${people.length}</div>
+        <div class="stat-icon">👥</div>
+      </div>
+      <div class="stat-card gold">
+        <div class="stat-label">Events Held</div>
+        <div class="stat-value">${events.length}</div>
+        <div class="stat-icon">📅</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Points Awarded</div>
+        <div class="stat-value">${totalPts}</div>
+        <div class="stat-icon">⭐</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Current Leader</div>
+        <div class="stat-value" style="font-size:1.2rem">${topPerson ? topPerson.person.name.split(' ')[0] : '—'}</div>
+        <div class="stat-icon">🏆</div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="gap:24px">
+      <!-- Top 5 -->
+      <div class="card">
+        <div class="card-title">🏆 Top 5 Leaders</div>
+        ${lb.slice(0,5).length === 0 ? `
+          <div class="empty-state" style="padding:30px">
+            <span class="empty-icon">🏁</span>
+            <h3>No scores yet</h3>
+            <p>Add events and check people in to start tracking.</p>
+          </div>` :
+          lb.slice(0,5).map((e, i) => `
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+            <span style="font-weight:800;font-size:1.1rem;width:28px;text-align:center;${i<3?`color:${['#f5c842','#c0c0c0','#cd7f32'][i]}`:'color:var(--text3)'}">
+              ${['🥇','🥈','🥉'][i] || `#${i+1}`}
+            </span>
+            ${avatarEl(e.person.name,'avatar-sm')}
+            <div style="flex:1">
+              <div style="font-weight:600;font-size:0.9rem">${e.person.name}</div>
+              <div style="font-size:0.75rem;color:var(--text2)">${e.person.team || 'No team'}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-weight:800;color:var(--accent)">${e.points} pts</div>
+              <div style="font-size:0.7rem;color:var(--text3)">${e.events} events</div>
+            </div>
+            <div style="width:80px"><div class="progress-bar"><div class="progress-fill" style="width:${lb[0]&&lb[0].points>0?Math.round(e.points/lb[0].points*100):0}%"></div></div></div>
+          </div>`).join('')
+        }
+        <div style="margin-top:16px"><a href="dashboard.html" class="btn btn-secondary btn-sm">View Full Leaderboard →</a></div>
+      </div>
+
+      <!-- Upcoming Events -->
+      <div>
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-title">📅 Upcoming Events</div>
+          ${upcoming.length === 0 ?
+            `<p style="color:var(--text2);font-size:0.9rem">No upcoming events. <a href="events.html" style="color:var(--accent)">Schedule one →</a></p>` :
+            upcoming.slice(0,4).map(ev => `
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+              <div style="width:44px;height:44px;border-radius:10px;background:var(--bg3);border:1px solid var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">
+                <span style="font-size:0.65rem;color:var(--text3);text-transform:uppercase">${ev.date?new Date(ev.date+'T12:00:00').toLocaleString('en',{month:'short'}):'—'}</span>
+                <span style="font-weight:800;font-size:1rem;line-height:1">${ev.date?new Date(ev.date+'T12:00:00').getDate():'—'}</span>
+              </div>
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:0.9rem">${ev.title}</div>
+                <div style="font-size:0.75rem;color:var(--text2)">${ev.location||'No location'}</div>
+              </div>
+              ${eventTypeBadge(ev.type)}
+            </div>`).join('')
+          }
+          <div style="margin-top:16px"><a href="events.html" class="btn btn-secondary btn-sm">Manage Events →</a></div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+          <div class="card-title">⚡ Quick Actions</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <a href="roster.html" class="btn btn-secondary" style="justify-content:center">👥 Manage Roster</a>
+            <a href="checkin.html" class="btn btn-secondary" style="justify-content:center">✅ Check-In</a>
+            <a href="gallery.html" class="btn btn-secondary" style="justify-content:center">🖼 Gallery</a>
+            <button class="btn btn-secondary" onclick="generateReport('overview')" style="width:100%;justify-content:center">📄 Export Report</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Events -->
+    ${recent.length > 0 ? `
+    <div class="card" style="margin-top:24px">
+      <div class="card-title">🕐 Recent Events</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Event</th><th>Date</th><th>Type</th><th>Attendees</th><th>Points Given</th><th></th></tr></thead>
+          <tbody>
+            ${recent.map(ev => {
+              const attended = ev.attendees.filter(a=>a.checkedIn);
+              const pts = attended.reduce((s,a)=>s+a.points,0);
+              return `<tr>
+                <td><span style="font-weight:600">${ev.title}</span></td>
+                <td>${fmtDate(ev.date)}</td>
+                <td>${eventTypeBadge(ev.type)}</td>
+                <td>${attended.length}</td>
+                <td><span style="color:var(--accent);font-weight:700">${pts}</span></td>
+                <td><a href="checkin.html?event=${ev.id}" class="btn btn-sm btn-ghost">Details →</a></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>` : ''}
+  `;
+}
+
+window.addEventListener('culturehub:updated', render);
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>(function(){var t=localStorage.getItem("culturehub_theme")||"dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CultureHub — Search</title>
+<link rel="stylesheet" href="style.css"/>
+<style>
+  .result-card {
+    padding: 16px 20px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--bg2);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .result-card:hover { border-color: var(--accent); background: var(--bg3); }
+  .detail-panel { animation: slideUp 0.2s ease; }
+</style>
+</head>
+<body>
+<div id="nav-root"></div>
+<main class="page" id="root"></main>
+
+<script src="data.js"></script>
+<script src="utils.js"></script>
+<script>
+document.getElementById('nav-root').innerHTML = navHTML();
+setActiveNav();
+
+let searchMode = 'person'; // 'person' | 'event'
+let searchQ = '';
+let selectedId = null;
+let detailType = null;
+
+function renderPersonDetail(personId) {
+  const stats = CH.getPersonStats(personId);
+  if (!stats) return '<p>Not found</p>';
+  const { person, eventsAttended, totalPoints, wins } = stats;
+
+  return `
+    <div class="detail-panel">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
+        ${avatarEl(person.name, 'avatar-lg')}
+        <div>
+          <div style="font-family:var(--font-display);font-size:1.4rem;font-weight:800">${person.name}</div>
+          ${person.team ? `<span class="badge badge-gray">${person.team}</span>` : ''}
+          ${person.email ? `<span style="color:var(--text2);font-size:0.85rem;margin-left:8px">${person.email}</span>` : ''}
+        </div>
+        <button class="btn btn-secondary btn-sm" style="margin-left:auto" onclick="generateReport('person','${person.id}')">📄 PDF Report</button>
+      </div>
+
+      <div class="grid-4" style="margin-bottom:24px">
+        <div class="stat-card accent">
+          <div class="stat-label">Total Points</div>
+          <div class="stat-value">${totalPoints}</div>
+        </div>
+        <div class="stat-card gold">
+          <div class="stat-label">Events Attended</div>
+          <div class="stat-value">${eventsAttended.length}</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Wins</div>
+          <div class="stat-value">${wins}</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">Leaderboard Rank</div>
+          <div class="stat-value">#${CH.getLeaderboard().findIndex(e=>e.person.id===person.id)+1 || '—'}</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📅 Events Attended</div>
+        ${eventsAttended.length === 0 ?
+          `<p style="color:var(--text2);font-size:0.9rem">No events attended yet</p>` :
+          `<div class="table-wrap">
+            <table>
+              <thead><tr><th>Event</th><th>Date</th><th>Type</th><th>Status</th><th>Points</th></tr></thead>
+              <tbody>
+                ${eventsAttended.map(ea => `
+                <tr>
+                  <td><span style="font-weight:600">${ea.event.title}</span></td>
+                  <td>${fmtDate(ea.event.date)}</td>
+                  <td>${eventTypeBadge(ea.event.type)}</td>
+                  <td>${ea.attendance.isWinner ?
+                    '<span class="badge badge-gold">🏆 Winner</span>' :
+                    '<span class="badge badge-green">✅ Attended</span>'}</td>
+                  <td><span style="font-weight:700;color:var(--accent)">${ea.attendance.points}</span></td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>`
+        }
+      </div>
+    </div>
+  `;
+}
+
+function renderEventDetail(eventId) {
+  const data = CH.load();
+  const event = data.events.find(e => e.id === eventId);
+  if (!event) return '<p>Not found</p>';
+  const people = data.people;
+  const attended = event.attendees.filter(a => a.checkedIn);
+  const notAttended = event.attendees.filter(a => !a.checkedIn);
+  const totalPts = attended.reduce((s,a) => s+a.points, 0);
+
+  return `
+    <div class="detail-panel">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-family:var(--font-display);font-size:1.4rem;font-weight:800;margin-bottom:8px">${event.title}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${eventTypeBadge(event.type)}
+            <span style="color:var(--text2);font-size:0.85rem">📅 ${fmtDate(event.date)}</span>
+            ${event.location?`<span style="color:var(--text2);font-size:0.85rem">📍 ${event.location}</span>`:''}
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <a href="checkin.html?event=${event.id}" class="btn btn-primary btn-sm">✅ Check-In</a>
+          <button class="btn btn-secondary btn-sm" onclick="generateReport('event','${event.id}')">📄 PDF Report</button>
+        </div>
+      </div>
+
+      <div class="grid-4" style="margin-bottom:24px">
+        <div class="stat-card accent">
+          <div class="stat-label">Checked In</div>
+          <div class="stat-value">${attended.length}</div>
+        </div>
+        <div class="stat-card gold">
+          <div class="stat-label">Registered</div>
+          <div class="stat-value">${event.attendees.length}</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Points Given</div>
+          <div class="stat-value">${totalPts}</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">Winners</div>
+          <div class="stat-value">${event.attendees.filter(a=>a.isWinner).length}</div>
+        </div>
+      </div>
+
+      ${event.description ? `<div class="card" style="margin-bottom:20px"><p style="color:var(--text2)">${event.description}</p></div>` : ''}
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-title">✅ Attended (${attended.length})</div>
+        ${attended.length === 0 ?
+          `<p style="color:var(--text2);font-size:0.9rem">No check-ins yet</p>` :
+          `<div class="table-wrap">
+            <table>
+              <thead><tr><th>Name</th><th>Team</th><th>Status</th><th>Points</th></tr></thead>
+              <tbody>
+                ${attended.map(a => {
+                  const p = people.find(x => x.id === a.personId);
+                  return p ? `<tr>
+                    <td><div style="display:flex;align-items:center;gap:8px">${avatarEl(p.name,'avatar-sm')}<span style="font-weight:600">${p.name}</span></div></td>
+                    <td>${p.team||'—'}</td>
+                    <td>${a.isWinner ? '<span class="badge badge-gold">🏆 Winner</span>' : '<span class="badge badge-green">✅ Attended</span>'}</td>
+                    <td><span style="font-weight:700;color:var(--accent)">${a.points}</span></td>
+                  </tr>` : '';
+                }).join('')}
+              </tbody>
+            </table>
+          </div>`
+        }
+      </div>
+
+      ${notAttended.length > 0 ? `
+      <div class="card">
+        <div class="card-title">⏳ Registered — Not Checked In (${notAttended.length})</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          ${notAttended.map(a => {
+            const p = people.find(x => x.id === a.personId);
+            return p ? `<div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;background:var(--bg3);border:1px solid var(--border)">
+              ${avatarEl(p.name,'avatar-sm')}
+              <span style="font-size:0.85rem;font-weight:500">${p.name}</span>
+            </div>` : '';
+          }).join('')}
+        </div>
+      </div>` : ''}
+    </div>
+  `;
+}
+
+function selectResult(id, type) {
+  selectedId = id;
+  detailType = type;
+  render();
+  setTimeout(() => document.getElementById('detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+}
+
+function render() {
+  const people = CH.getPeople();
+  const events = CH.getEvents();
+
+  let personResults = searchQ ? people.filter(p =>
+    p.name.toLowerCase().includes(searchQ) ||
+    (p.team||'').toLowerCase().includes(searchQ) ||
+    (p.email||'').toLowerCase().includes(searchQ)) : people;
+
+  let eventResults = searchQ ? events.filter(e =>
+    e.title.toLowerCase().includes(searchQ) ||
+    (e.type||'').toLowerCase().includes(searchQ) ||
+    (e.location||'').toLowerCase().includes(searchQ) ||
+    (e.description||'').toLowerCase().includes(searchQ)) : events;
+
+  // Sort by name/date
+  personResults = [...personResults].sort((a,b) => a.name.localeCompare(b.name));
+  eventResults = [...eventResults].sort((a,b) => (b.date||'') > (a.date||'') ? 1 : -1);
+
+  const lb = CH.getLeaderboard();
+
+  document.getElementById('root').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">🔍 <span>Search</span></div>
+        <div class="page-subtitle">Find people or events</div>
+      </div>
+    </div>
+
+    <!-- Search bar -->
+    <div class="search-wrap" style="margin-bottom:20px">
+      <input class="form-control" style="font-size:1rem;padding:14px 14px 14px 44px" 
+        placeholder="Search people, events, teams…" value="${searchQ}"
+        oninput="searchQ=this.value.toLowerCase();render()" autofocus/>
+    </div>
+
+    <!-- Mode tabs -->
+    <div style="display:flex;gap:8px;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:16px">
+      <button class="btn ${searchMode==='person'?'btn-primary':'btn-secondary'}" onclick="searchMode='person';render()">
+        👤 People (${personResults.length})
+      </button>
+      <button class="btn ${searchMode==='event'?'btn-primary':'btn-secondary'}" onclick="searchMode='event';render()">
+        📅 Events (${eventResults.length})
+      </button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:${selectedId?'360px 1fr':'1fr'};gap:24px;align-items:start">
+      <!-- Results list -->
+      <div>
+        ${searchMode === 'person' ?
+          (personResults.length === 0 ?
+            `<div class="empty-state" style="padding:40px">
+              <span class="empty-icon">👤</span>
+              <h3>No people found</h3>
+            </div>` :
+            `<div style="display:flex;flex-direction:column;gap:8px">
+              ${personResults.map(p => {
+                const stats = lb.find(e=>e.person.id===p.id);
+                const isSelected = selectedId === p.id;
+                return `
+                <div class="result-card" style="${isSelected?'border-color:var(--accent);background:var(--accent-glow)':''}"
+                  onclick="selectResult('${p.id}','person')">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    ${avatarEl(p.name)}
+                    <div style="flex:1;min-width:0">
+                      <div style="font-weight:600">${p.name}</div>
+                      <div style="font-size:0.78rem;color:var(--text2)">${p.team||'No team'}${p.email?' · '+p.email:''}</div>
+                    </div>
+                    <div style="text-align:right;flex-shrink:0">
+                      <div style="font-weight:800;color:var(--accent)">${stats?stats.points:0} pts</div>
+                      <div style="font-size:0.7rem;color:var(--text3)">${stats?stats.events:0} events</div>
+                    </div>
+                  </div>
+                </div>`;
+              }).join('')}
+            </div>`) :
+          (eventResults.length === 0 ?
+            `<div class="empty-state" style="padding:40px">
+              <span class="empty-icon">📅</span>
+              <h3>No events found</h3>
+            </div>` :
+            `<div style="display:flex;flex-direction:column;gap:8px">
+              ${eventResults.map(ev => {
+                const attended = ev.attendees.filter(a=>a.checkedIn).length;
+                const isSelected = selectedId === ev.id;
+                return `
+                <div class="result-card" style="${isSelected?'border-color:var(--accent);background:var(--accent-glow)':''}"
+                  onclick="selectResult('${ev.id}','event')">
+                  <div style="display:flex;align-items:flex-start;gap:10px">
+                    <div style="flex:1;min-width:0">
+                      <div style="font-weight:600;margin-bottom:4px">${ev.title}</div>
+                      <div style="display:flex;gap:6px;flex-wrap:wrap">
+                        ${eventTypeBadge(ev.type)}
+                        <span style="font-size:0.78rem;color:var(--text2)">${fmtDate(ev.date)}</span>
+                      </div>
+                    </div>
+                    <div style="text-align:right;flex-shrink:0">
+                      <div style="font-weight:800;color:var(--accent)">${attended}</div>
+                      <div style="font-size:0.7rem;color:var(--text3)">attended</div>
+                    </div>
+                  </div>
+                </div>`;
+              }).join('')}
+            </div>`)
+        }
+      </div>
+
+      <!-- Detail pane -->
+      ${selectedId ? `
+      <div id="detail">
+        ${detailType === 'person' ? renderPersonDetail(selectedId) : renderEventDetail(selectedId)}
+      </div>` : `
+      <div style="display:flex;align-items:center;justify-content:center;min-height:300px;color:var(--text3)">
+        <div style="text-align:center">
+          <div style="font-size:3rem;margin-bottom:8px">👆</div>
+          <div>Select a result to see details</div>
+        </div>
+      </div>`}
+    </div>
+  `;
+}
+
+window.addEventListener('culturehub:updated', render);
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>(function(){var t=localStorage.getItem("culturehub_theme")||"dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CultureHub — Roster</title>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div id="nav-root"></div>
+<main class="page" id="root"></main>
+
+<script src="data.js"></script>
+<script src="utils.js"></script>
+<script>
+document.getElementById('nav-root').innerHTML = navHTML();
+setActiveNav();
+
+let searchQ = '', filterTeam = 'all';
+
+function showPersonModal(id = null) {
+  const p = id ? CH.getPeople().find(x => x.id === id) : null;
+  openModal(`
+    <div class="modal-header">
+      <span class="modal-title">${p ? '✏️ Edit Person' : '➕ Add Person'}</span>
+      <button class="modal-close" onclick="closeModal(this)">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Full Name *</label>
+      <input class="form-control" id="p-name" placeholder="Jane Smith" value="${p ? p.name : ''}"/>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Team / Department</label>
+        <input class="form-control" id="p-team" placeholder="Engineering, HR, etc." value="${p ? p.team : ''}"/>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" class="form-control" id="p-email" placeholder="jane@company.com" value="${p ? p.email : ''}"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal(this)">Cancel</button>
+      <button class="btn btn-primary" onclick="savePerson('${id||''}')">
+        ${p ? 'Save Changes' : 'Add Person'}
+      </button>
+    </div>
+  `);
+}
+
+function savePerson(id) {
+  const name = document.getElementById('p-name').value.trim();
+  if (!name) { toast('Name is required', 'error'); return; }
+  const team = document.getElementById('p-team').value.trim();
+  const email = document.getElementById('p-email').value.trim();
+  if (id) {
+    CH.updatePerson(id, { name, team, email });
+    toast('Person updated', 'success');
+  } else {
+    CH.addPerson(name, team, email);
+    toast('Person added!', 'success');
+  }
+  closeAllModals();
+  render();
+}
+
+async function deletePerson(id, name) {
+  const ok = await confirmDialog(`Remove <strong>${name}</strong> from roster? Their attendance history will also be removed.`);
+  if (!ok) return;
+  CH.deletePerson(id);
+  toast('Person removed', 'info');
+  render();
+}
+
+function showImportModal() {
+  openModal(`
+    <div class="modal-header">
+      <span class="modal-title">📥 Import Team Members</span>
+      <button class="modal-close" onclick="closeModal(this)">✕</button>
+    </div>
+    <p style="color:var(--text2);font-size:0.875rem;margin-bottom:16px">
+      Import from a JSON file or paste JSON data. Supports fields: <code style="color:var(--accent)">name</code>, <code style="color:var(--accent)">team</code>, <code style="color:var(--accent)">email</code>.
+      Also works with Microsoft Teams / Azure AD export format (<code style="color:var(--accent)">displayName</code>, <code style="color:var(--accent)">mail</code>).
+    </p>
+
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('import-file').click()">📂 Load JSON File</button>
+      <input type="file" id="import-file" accept=".json,.csv" style="display:none" onchange="loadImportFile(event)"/>
+      <button class="btn btn-ghost btn-sm" onclick="loadSampleImport()">Try Sample Data</button>
+    </div>
+
+    <div class="form-group">
+      <label>Paste JSON Array</label>
+      <textarea class="form-control" id="import-json" style="min-height:140px;font-family:monospace;font-size:0.8rem"
+        placeholder='[{"name":"Alice Johnson","team":"Engineering"},{"name":"Bob Smith","team":"HR","email":"bob@company.com"}]'></textarea>
+    </div>
+
+    <div style="background:var(--bg3);border-radius:8px;padding:12px;font-size:0.8rem;color:var(--text2);margin-bottom:16px">
+      <strong>Microsoft Teams format:</strong> Export users from Admin Center as JSON with fields <code>displayName</code>, <code>mail</code>, <code>department</code>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal(this)">Cancel</button>
+      <button class="btn btn-primary" onclick="doImport()">📥 Import</button>
+    </div>
+  `, { lg: false });
+}
+
+function loadImportFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    document.getElementById('import-json').value = evt.target.result;
+  };
+  reader.readAsText(file);
+}
+
+function loadSampleImport() {
+  const sample = [
+    {"name":"Alice Johnson","team":"Engineering","email":"alice@company.com"},
+    {"name":"Bob Smith","team":"Marketing","email":"bob@company.com"},
+    {"name":"Carol White","team":"HR","email":"carol@company.com"},
+    {"name":"David Lee","team":"Engineering","email":"david@company.com"},
+    {"name":"Emma Davis","team":"Sales","email":"emma@company.com"},
+    {"displayName":"Frank Miller","mail":"frank@company.com","department":"Finance"},
+    {"displayName":"Grace Kim","mail":"grace@company.com","department":"Engineering"}
+  ];
+  document.getElementById('import-json').value = JSON.stringify(sample, null, 2);
+}
+
+function doImport() {
+  const raw = document.getElementById('import-json').value.trim();
+  if (!raw) { toast('Paste JSON data first', 'error'); return; }
+  let list;
+  try {
+    list = JSON.parse(raw);
+    if (!Array.isArray(list)) list = [list];
+  } catch(e) {
+    toast('Invalid JSON format', 'error'); return;
+  }
+  const added = CH.importPeople(list);
+  toast(`Imported ${added} new people (${list.length - added} already existed)`, 'success');
+  closeAllModals();
+  render();
+}
+
+function getTeams() {
+  const teams = [...new Set(CH.getPeople().map(p => p.team).filter(Boolean))].sort();
+  return teams;
+}
+
+function render() {
+  let people = CH.getPeople().sort((a,b) => a.name.localeCompare(b.name));
+  const lb = CH.getLeaderboard();
+  const teams = getTeams();
+
+  if (searchQ) people = people.filter(p =>
+    p.name.toLowerCase().includes(searchQ) ||
+    (p.team||'').toLowerCase().includes(searchQ) ||
+    (p.email||'').toLowerCase().includes(searchQ));
+  if (filterTeam !== 'all') people = people.filter(p => p.team === filterTeam);
+
+  document.getElementById('root').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">👥 <span>Roster</span></div>
+        <div class="page-subtitle">${CH.getPeople().length} people · ${teams.length} teams</div>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn btn-secondary" onclick="showImportModal()">📥 Import</button>
+        <button class="btn btn-primary" onclick="showPersonModal()">+ Add Person</button>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;align-items:center">
+      <div class="search-wrap" style="flex:1;min-width:200px">
+        <input class="form-control" placeholder="Search by name, team, email…" value="${searchQ}"
+          oninput="searchQ=this.value.toLowerCase();render()"/>
+      </div>
+      <select class="form-control" style="width:180px" onchange="filterTeam=this.value;render()">
+        <option value="all">All Teams</option>
+        ${teams.map(t => `<option ${filterTeam===t?'selected':''}>${t}</option>`).join('')}
+      </select>
+    </div>
+
+    ${people.length === 0 ? `
+      <div class="empty-state">
+        <span class="empty-icon">👥</span>
+        <h3>${searchQ||filterTeam!=='all' ? 'No people match' : 'Roster is empty'}</h3>
+        <p>${searchQ||filterTeam!=='all' ? 'Try different filters.' : 'Add your first team member!'}</p>
+        ${!searchQ&&filterTeam==='all'?`
+          <div style="display:flex;gap:12px;justify-content:center;margin-top:16px">
+            <button class="btn btn-primary" onclick="showPersonModal()">+ Add Person</button>
+            <button class="btn btn-secondary" onclick="showImportModal()">📥 Import Team</button>
+          </div>`:''}
+      </div>` :
+    `<div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Team</th>
+            <th>Email</th>
+            <th>Total Points</th>
+            <th>Events</th>
+            <th>Wins</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${people.map(p => {
+            const stats = lb.find(e => e.person.id === p.id);
+            return `
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px">
+                  ${avatarEl(p.name)}
+                  <span style="font-weight:600">${p.name}</span>
+                </div>
+              </td>
+              <td>${p.team ? `<span class="badge badge-gray">${p.team}</span>` : '<span style="color:var(--text3)">—</span>'}</td>
+              <td style="color:var(--text2);font-size:0.85rem">${p.email || '—'}</td>
+              <td><span style="font-weight:700;color:var(--accent)">${stats ? stats.points : 0}</span></td>
+              <td>${stats ? stats.events : 0}</td>
+              <td>${stats && stats.wins > 0 ? `<span style="color:var(--gold)">🏆 ${stats.wins}</span>` : '—'}</td>
+              <td>
+                <div style="display:flex;gap:6px;justify-content:flex-end">
+                  <button class="btn btn-sm btn-ghost" onclick="generateReport('person','${p.id}')" title="Report">📄</button>
+                  <button class="btn btn-sm btn-ghost" onclick="showPersonModal('${p.id}')">✏️</button>
+                  <button class="btn btn-sm btn-danger" onclick="deletePerson('${p.id}','${p.name.replace(/'/g,"\\'")}')">🗑</button>
+                </div>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`}
+  `;
+}
+
+window.addEventListener('culturehub:updated', render);
+render();
+</script>
+</body>
+</html>

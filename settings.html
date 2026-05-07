@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>(function(){var t=localStorage.getItem("culturehub_theme")||"dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CultureHub — Settings</title>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div id="nav-root"></div>
+<main class="page" id="root"></main>
+
+<script src="data.js"></script>
+<script src="utils.js"></script>
+<script>
+document.getElementById('nav-root').innerHTML = navHTML();
+setActiveNav();
+
+function saveOrgSettings() {
+  const orgName = document.getElementById('org-name').value.trim();
+  if (!orgName) { toast('Organization name required', 'error'); return; }
+  CH.saveSettings({ orgName });
+  toast('Settings saved!', 'success');
+  render();
+}
+
+function doRestore() {
+  const raw = document.getElementById('restore-json').value.trim();
+  if (!raw) { toast('Paste backup JSON first', 'error'); return; }
+  const result = CH.importBackup(raw);
+  if (result.ok) {
+    toast(`Restored! ${result.people} people, ${result.events} events`, 'success');
+    render();
+  } else {
+    toast('Restore failed: ' + result.error, 'error');
+  }
+}
+
+function loadRestoreFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    document.getElementById('restore-json').value = evt.target.result;
+    toast('File loaded — click Restore to apply', 'info');
+  };
+  reader.readAsText(file);
+}
+
+async function clearAllData() {
+  const ok = await confirmDialog(
+    '<strong style="color:var(--red)">⚠️ This will erase all data!</strong><br><br>All people, events, attendance, and photos will be permanently deleted. This cannot be undone.<br><br>Make sure you have a backup first.',
+    'Delete All Data'
+  );
+  if (!ok) return;
+  const ok2 = await confirmDialog('Are you absolutely sure? Type your intent carefully.', 'Final Confirmation');
+  if (!ok2) return;
+  localStorage.removeItem('culturehub_data');
+  toast('All data cleared', 'info');
+  window.location.href = 'index.html';
+}
+
+function addSampleData() {
+  const people = [
+    {name:'Alice Johnson',team:'Engineering',email:'alice@co.com'},
+    {name:'Bob Smith',team:'Marketing',email:'bob@co.com'},
+    {name:'Carol White',team:'HR',email:'carol@co.com'},
+    {name:'David Lee',team:'Engineering',email:'david@co.com'},
+    {name:'Emma Davis',team:'Sales',email:'emma@co.com'},
+    {name:'Frank Miller',team:'Finance',email:'frank@co.com'},
+    {name:'Grace Kim',team:'Engineering',email:'grace@co.com'},
+    {name:'Henry Brown',team:'Marketing',email:'henry@co.com'},
+  ];
+  const addedNames = CH.importPeople(people);
+
+  const ids = CH.getPeople().filter(p => people.find(x=>x.name===p.name)).map(p=>p.id);
+
+  const ev1 = CH.addEvent('Summer Trivia Night', '2025-07-15', 'Game', 'Teams compete in company trivia!', 'Rooftop');
+  ids.forEach(id => CH.addAttendee(ev1.id, id));
+  [ids[0],ids[1],ids[2],ids[3],ids[4],ids[5]].forEach(id => { if(id) CH.checkIn(ev1.id, id); });
+  if (ids[0]) CH.toggleWinner(ev1.id, ids[0]);
+  if (ids[1]) CH.toggleWinner(ev1.id, ids[1]);
+
+  const ev2 = CH.addEvent('Team Bowling Night', '2025-08-22', 'Social', 'Friendly bowling competition at Lucky Strike!', 'Lucky Strike Lanes');
+  ids.forEach(id => CH.addAttendee(ev2.id, id));
+  [ids[2],ids[3],ids[4],ids[5],ids[6],ids[7]].forEach(id => { if(id) CH.checkIn(ev2.id, id); });
+  if (ids[6]) CH.toggleWinner(ev2.id, ids[6]);
+
+  const ev3 = CH.addEvent('Q3 Town Hall Social', '2025-09-10', 'Team Building', 'Post-town-hall mingling and food trucks', 'Courtyard');
+  ids.forEach(id => CH.addAttendee(ev3.id, id));
+  ids.forEach(id => { if(id) CH.checkIn(ev3.id, id); });
+
+  const ev4 = CH.addEvent('Halloween Costume Contest', '2025-10-31', 'Holiday', 'Best costume wins a prize!', 'Main Office');
+
+  toast('Sample data loaded! 8 people, 4 events added.', 'success');
+  render();
+}
+
+function render() {
+  const s = CH.getSettings();
+  const data = CH.load();
+  const dataSize = new Blob([JSON.stringify(data)]).size;
+  const sizeFmt = dataSize > 1024*1024 ? (dataSize/1024/1024).toFixed(1)+' MB' : (dataSize/1024).toFixed(1)+' KB';
+
+  document.getElementById('root').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">⚙️ <span>Settings</span></div>
+        <div class="page-subtitle">Configure CultureHub and manage your data</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+      <!-- Left column -->
+      <div style="display:flex;flex-direction:column;gap:24px">
+        <!-- Organization settings -->
+        <div class="card">
+          <div class="card-title">🏢 Organization</div>
+          <div class="form-group">
+            <label>Organization Name</label>
+            <input class="form-control" id="org-name" value="${s.orgName||'Our Organization'}" placeholder="My Company"/>
+          </div>
+          <button class="btn btn-primary" onclick="saveOrgSettings()">Save Settings</button>
+        </div>
+
+        <!-- Data overview -->
+        <div class="card">
+          <div class="card-title">📊 Data Summary</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+            <div style="background:var(--bg3);border-radius:8px;padding:14px;text-align:center">
+              <div style="font-size:1.8rem;font-weight:800;color:var(--accent)">${data.people.length}</div>
+              <div style="font-size:0.75rem;color:var(--text2);text-transform:uppercase">People</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:8px;padding:14px;text-align:center">
+              <div style="font-size:1.8rem;font-weight:800;color:var(--gold)">${data.events.length}</div>
+              <div style="font-size:0.75rem;color:var(--text2);text-transform:uppercase">Events</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:8px;padding:14px;text-align:center">
+              <div style="font-size:1.8rem;font-weight:800;color:var(--green)">${data.events.reduce((s,e)=>s+e.attendees.filter(a=>a.checkedIn).length,0)}</div>
+              <div style="font-size:0.75rem;color:var(--text2);text-transform:uppercase">Check-Ins</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:8px;padding:14px;text-align:center">
+              <div style="font-size:1.8rem;font-weight:800">${sizeFmt}</div>
+              <div style="font-size:0.75rem;color:var(--text2);text-transform:uppercase">Storage Used</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" onclick="generateReport('overview')" style="flex:1;justify-content:center">📄 Full Report PDF</button>
+          </div>
+        </div>
+
+        <!-- Sample Data -->
+        <div class="card">
+          <div class="card-title">🧪 Demo & Testing</div>
+          <p style="color:var(--text2);font-size:0.875rem;margin-bottom:16px">Load sample data to explore CultureHub features with pre-populated people, events, and attendance.</p>
+          <button class="btn btn-secondary" onclick="addSampleData()">🎲 Load Sample Data</button>
+        </div>
+      </div>
+
+      <!-- Right column: Backup / Restore -->
+      <div style="display:flex;flex-direction:column;gap:24px">
+        <!-- Backup -->
+        <div class="card">
+          <div class="card-title">💾 Backup Data</div>
+          <p style="color:var(--text2);font-size:0.875rem;margin-bottom:16px">
+            Download a complete JSON backup of all your data — people, events, attendance history, and gallery references.
+          </p>
+          <button class="btn btn-primary" onclick="CH.exportBackup()" style="width:100%;justify-content:center;margin-bottom:8px">
+            💾 Download Backup JSON
+          </button>
+          <p style="font-size:0.78rem;color:var(--text3)">Keep backups regularly. Data is stored in your browser's localStorage.</p>
+        </div>
+
+        <!-- Restore -->
+        <div class="card">
+          <div class="card-title">📥 Restore from Backup</div>
+          <p style="color:var(--text2);font-size:0.875rem;margin-bottom:16px">
+            Restore your data from a previously downloaded backup file. <strong style="color:var(--red)">This will replace all current data.</strong>
+          </p>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('restore-file').click()">📂 Load Backup File</button>
+            <input type="file" id="restore-file" accept=".json" style="display:none" onchange="loadRestoreFile(event)"/>
+          </div>
+          <div class="form-group">
+            <label>Or Paste Backup JSON</label>
+            <textarea class="form-control" id="restore-json" style="min-height:100px;font-family:monospace;font-size:0.75rem" placeholder='{"version":1,"people":[...],"events":[...]}'></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="doRestore()" style="width:100%;justify-content:center">
+            ♻️ Restore Data
+          </button>
+        </div>
+
+        <!-- Import Teams -->
+        <div class="card">
+          <div class="card-title">👥 Import from Team</div>
+          <p style="color:var(--text2);font-size:0.875rem;margin-bottom:16px">
+            Import team members from a JSON file. Supports Microsoft Teams / Azure AD export format with <code style="color:var(--accent)">displayName</code>, <code style="color:var(--accent)">mail</code>, <code style="color:var(--accent)">department</code> fields.
+          </p>
+          <a href="roster.html" class="btn btn-secondary" style="width:100%;justify-content:center">
+            📥 Go to Roster Import →
+          </a>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="card" style="border-color:rgba(248,113,113,0.2)">
+          <div class="card-title" style="color:var(--red)">⚠️ Danger Zone</div>
+          <p style="color:var(--text2);font-size:0.875rem;margin-bottom:16px">
+            Permanently delete all CultureHub data. This cannot be undone. Make sure you have a backup.
+          </p>
+          <button class="btn btn-danger" onclick="clearAllData()" style="width:100%;justify-content:center">
+            🗑 Delete All Data
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- About -->
+    <div class="card" style="margin-top:24px;text-align:center;padding:32px">
+      <div style="font-size:2rem;margin-bottom:8px">🎯</div>
+      <div style="font-family:var(--font-display);font-size:1.2rem;font-weight:800;margin-bottom:6px">CultureHub</div>
+      <div style="color:var(--text2);font-size:0.85rem">Office Culture Event Tracker · All data stored locally in your browser · No server required</div>
+      <div style="margin-top:12px;display:flex;justify-content:center;gap:16px;font-size:0.8rem;color:var(--text3)">
+        <span>📅 Events</span>
+        <span>👥 Roster</span>
+        <span>✅ Check-In</span>
+        <span>📊 Dashboard</span>
+        <span>🔍 Search</span>
+        <span>🖼 Gallery</span>
+      </div>
+    </div>
+  `;
+}
+
+window.addEventListener('culturehub:updated', render);
+render();
+</script>
+</body>
+</html>

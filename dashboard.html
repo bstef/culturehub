@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>(function(){var t=localStorage.getItem("culturehub_theme")||"dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CultureHub — Dashboard</title>
+<link rel="stylesheet" href="style.css"/>
+<style>
+  body { overflow-x: hidden; }
+  
+  /* TV Mode overrides */
+  body.tv-mode { background: var(--bg); }
+  body.tv-mode .ch-nav { display: none; }
+  body.tv-mode .page { padding: 24px 32px; max-width: none; }
+  body.tv-mode .tv-controls { display: none; }
+
+  /* Leaderboard items */
+  .lb-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 90px 90px 80px 100px;
+    align-items: center; gap: 16px;
+    padding: 14px 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    transition: all 0.3s ease;
+    animation: slideInRow 0.4s ease backwards;
+  }
+  .lb-row:hover { border-color: var(--border2); }
+  .lb-row.rank-gold { border-color: rgba(245,200,66,0.3); background: linear-gradient(135deg,rgba(245,200,66,0.05),var(--bg2)); }
+  .lb-row.rank-silver { border-color: rgba(192,192,192,0.2); }
+  .lb-row.rank-bronze { border-color: rgba(205,127,50,0.2); }
+
+  .rank-num {
+    font-family: var(--font-display);
+    font-size: 1.5rem; font-weight: 900;
+    text-align: center; line-height: 1;
+  }
+
+  .points-bar { position: relative; height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .points-fill { height: 100%; border-radius: 99px; transition: width 0.8s ease; }
+
+  @keyframes slideInRow {
+    from { transform: translateX(-30px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* Ticker */
+  .ticker {
+    overflow: hidden; white-space: nowrap;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 0;
+    position: relative;
+  }
+  .ticker::before, .ticker::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: 60px; z-index: 2;
+  }
+  .ticker::before { left: 0; background: linear-gradient(90deg, var(--bg3), transparent); }
+  .ticker::after { right: 0; background: linear-gradient(-90deg, var(--bg3), transparent); }
+  .ticker-inner {
+    display: inline-flex; gap: 0;
+    animation: ticker 30s linear infinite;
+  }
+  .ticker-item {
+    padding: 0 32px; font-size: 0.85rem; color: var(--text2);
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .ticker-item strong { color: var(--text); }
+  @keyframes ticker {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* TV floating controls */
+  .tv-exit-btn {
+    position: fixed; top: 16px; right: 16px; z-index: 999;
+    background: rgba(0,0,0,0.5); color: white;
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;
+    padding: 8px 14px; font-size: 0.8rem; cursor: pointer;
+    backdrop-filter: blur(8px);
+    display: none;
+  }
+  body.tv-mode .tv-exit-btn { display: flex; align-items: center; gap: 6px; }
+
+  .pulse-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+    animation: pulseDot 2s infinite;
+  }
+  @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.4)} }
+
+  /* Recent activity feed */
+  .activity-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .activity-item:last-child { border-bottom: none; }
+  .activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div id="nav-root"></div>
+<button class="tv-exit-btn" id="tv-exit" onclick="exitTV()">✕ Exit TV Mode</button>
+<main class="page" id="root"></main>
+
+<script src="data.js"></script>
+<script src="utils.js"></script>
+<script>
+document.getElementById('nav-root').innerHTML = navHTML();
+setActiveNav();
+
+let tvMode = false;
+let autoRefresh = null;
+
+function enterTV() {
+  tvMode = true;
+  document.body.classList.add('tv-mode');
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+  autoRefresh = setInterval(render, 30000);
+  render();
+}
+
+function exitTV() {
+  tvMode = false;
+  document.body.classList.remove('tv-mode');
+  document.exitFullscreen?.();
+  clearInterval(autoRefresh);
+  render();
+}
+
+function rankStyle(i) {
+  if (i === 0) return 'rank-gold';
+  if (i === 1) return 'rank-silver';
+  if (i === 2) return 'rank-bronze';
+  return '';
+}
+function rankIcon(i) {
+  return ['🥇','🥈','🥉'][i] || `<span style="color:var(--text3)">#${i+1}</span>`;
+}
+function rankColor(i) {
+  if (i === 0) return '#f5c842';
+  if (i === 1) return '#c0c0c0';
+  if (i === 2) return '#cd7f32';
+  return 'var(--accent)';
+}
+
+function render() {
+  const lb = CH.getLeaderboard();
+  const events = CH.getEvents();
+  const people = CH.getPeople();
+  const s = CH.getSettings();
+  const top10 = lb.slice(0, 10);
+  const maxPts = top10[0] ? top10[0].points : 1;
+  const totalPts = lb.reduce((s,e)=>s+e.points,0);
+  const recentEvents = [...events].sort((a,b)=>(b.date||'')>(a.date||'')?1:-1).slice(0,5);
+
+  // Build ticker text
+  const tickerItems = [
+    ...top10.map(e => `🏆 ${e.person.name} · ${e.points} pts`),
+    ...recentEvents.map(ev => `📅 ${ev.title} · ${fmtDateShort(ev.date)}`),
+  ];
+  const tickerHtml = tickerItems.length > 0
+    ? [...tickerItems, ...tickerItems].map(t => `<span class="ticker-item"><strong>${t}</strong></span>`).join('')
+    : `<span class="ticker-item">No data yet</span>`;
+
+  document.getElementById('root').innerHTML = `
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${tvMode?'20px':'28px'};flex-wrap:wrap;gap:12px">
+      <div>
+        <div class="page-title" style="${tvMode?'font-size:2.4rem':''}">
+          🏆 <span>${s.orgName || 'CultureHub'}</span> Leaderboard
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+          <div class="pulse-dot"></div>
+          <span style="font-size:0.85rem;color:var(--text2)">Live · Updated ${new Date().toLocaleTimeString()}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap" class="tv-controls">
+        <button class="btn btn-primary" onclick="enterTV()" id="tv-btn">
+          📺 TV Mode
+        </button>
+        <button class="btn btn-secondary" onclick="generateReport('overview')">📄 Export PDF</button>
+      </div>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="grid-4" style="margin-bottom:24px">
+      <div class="stat-card accent">
+        <div class="stat-label">Participants</div>
+        <div class="stat-value">${lb.filter(e=>e.events>0).length}</div>
+        <div class="stat-icon">👥</div>
+      </div>
+      <div class="stat-card gold">
+        <div class="stat-label">Events</div>
+        <div class="stat-value">${events.length}</div>
+        <div class="stat-icon">📅</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Points Awarded</div>
+        <div class="stat-value">${totalPts}</div>
+        <div class="stat-icon">⭐</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Winners</div>
+        <div class="stat-value">${lb.reduce((s,e)=>s+e.wins,0)}</div>
+        <div class="stat-icon">🏆</div>
+      </div>
+    </div>
+
+    <!-- Ticker -->
+    <div class="ticker" style="margin-bottom:24px">
+      <div class="ticker-inner">${tickerHtml}</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:${tvMode?'1fr':'1fr 340px'};gap:24px;align-items:start">
+      <!-- Leaderboard -->
+      <div>
+        <!-- Column headers -->
+        <div style="display:grid;grid-template-columns:60px 1fr 90px 90px 80px 100px;gap:16px;padding:0 20px 8px;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3)">
+          <div style="text-align:center">Rank</div>
+          <div>Name</div>
+          <div style="text-align:right">Points</div>
+          <div style="text-align:right">Events</div>
+          <div style="text-align:right">Wins</div>
+          <div>Progress</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${top10.length === 0 ?
+            `<div class="empty-state">
+              <span class="empty-icon">🏁</span>
+              <h3>No scores yet</h3>
+              <p>Check people in to start the leaderboard!</p>
+            </div>` :
+            top10.map((e, i) => `
+            <div class="lb-row ${rankStyle(i)}" style="animation-delay:${i*0.06}s">
+              <div class="rank-num" style="color:${rankColor(i)};font-size:${tvMode?'2rem':'1.5rem'}">${rankIcon(i)}</div>
+              <div style="display:flex;align-items:center;gap:12px;min-width:0">
+                ${avatarEl(e.person.name, tvMode?'avatar-lg':'')}
+                <div style="min-width:0">
+                  <div style="font-weight:700;font-size:${tvMode?'1.2rem':'1rem'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.person.name}</div>
+                  <div style="font-size:0.78rem;color:var(--text2)">${e.person.team||'—'}</div>
+                </div>
+              </div>
+              <div style="text-align:right;font-weight:900;font-size:${tvMode?'1.6rem':'1.3rem'};font-family:var(--font-display);color:${rankColor(i)}">${e.points}</div>
+              <div style="text-align:right;font-size:${tvMode?'1.1rem':'0.95rem'};color:var(--text2)">${e.events}</div>
+              <div style="text-align:right">
+                ${e.wins > 0 ? `<span style="color:var(--gold);font-weight:700">${e.wins} 🏆</span>` : '—'}
+              </div>
+              <div>
+                <div class="points-bar">
+                  <div class="points-fill" style="width:${maxPts>0?Math.round(e.points/maxPts*100):0}%;background:${rankColor(i)}"></div>
+                </div>
+              </div>
+            </div>`).join('')
+          }
+        </div>
+      </div>
+
+      ${!tvMode ? `
+      <!-- Side panel: Recent Events + Activity -->
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <div class="card">
+          <div class="card-title">📅 Event Attendance</div>
+          ${recentEvents.length === 0 ? `<p style="color:var(--text2);font-size:0.85rem">No events yet</p>` :
+            recentEvents.map(ev => {
+              const attended = ev.attendees.filter(a=>a.checkedIn).length;
+              const total = ev.attendees.length;
+              const pct = total > 0 ? Math.round(attended/total*100) : 0;
+              return `
+              <div style="margin-bottom:14px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                  <span style="font-size:0.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%">${ev.title}</span>
+                  <span style="font-size:0.78rem;color:var(--text2)">${attended}/${total}</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width:${pct}%"></div>
+                </div>
+              </div>`;
+            }).join('')}
+        </div>
+
+        <!-- Recent participants -->
+        <div class="card">
+          <div class="card-title">🎯 Recent Activity</div>
+          ${(() => {
+            const activity = [];
+            events.slice().sort((a,b)=>(b.date||'')>(a.date||'')?1:-1)
+              .slice(0,3).forEach(ev => {
+                ev.attendees.filter(a=>a.checkedIn).forEach(a => {
+                  const p = people.find(x=>x.id===a.personId);
+                  if (p) activity.push({ name: p.name, event: ev.title, pts: a.points, isWinner: a.isWinner });
+                });
+              });
+            const recent = activity.slice(0, 8);
+            return recent.length === 0 ?
+              `<p style="color:var(--text2);font-size:0.85rem">No activity yet</p>` :
+              recent.map(a => `
+              <div class="activity-item">
+                <div class="activity-dot" style="background:${a.isWinner?'var(--gold)':'var(--green)'}"></div>
+                <span style="font-weight:600;font-size:0.85rem">${a.name}</span>
+                <span style="color:var(--text2);font-size:0.8rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.event}</span>
+                ${pointsBadge(a.pts, a.isWinner)}
+              </div>`).join('');
+          })()}
+        </div>
+      </div>` : ''}
+    </div>
+  `;
+}
+
+window.addEventListener('culturehub:updated', render);
+
+// Keyboard shortcut
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && tvMode) exitTV();
+  if (e.key === 'F11' || (e.key === 't' && e.altKey)) { e.preventDefault(); tvMode ? exitTV() : enterTV(); }
+});
+
+render();
+</script>
+</body>
+</html>
