@@ -80,8 +80,9 @@ function showImportModal() {
       <button class="modal-close" onclick="closeModal(this)">✕</button>
     </div>
     <p style="color:var(--text2);font-size:0.875rem;margin-bottom:16px">
-      Import from a JSON file or paste JSON data. Supports fields: <code style="color:var(--accent)">name</code>, <code style="color:var(--accent)">team</code>, <code style="color:var(--accent)">email</code>.
-      Also works with Microsoft Teams / Azure AD export format (<code style="color:var(--accent)">displayName</code>, <code style="color:var(--accent)">mail</code>).
+      Import from JSON or CSV. Supports plain rosters plus Microsoft Teams / Azure AD group exports
+      (<code style="color:var(--accent)">value</code>, <code style="color:var(--accent)">members</code>, or <code style="color:var(--accent)">users</code> arrays with
+      <code style="color:var(--accent)">displayName</code>, <code style="color:var(--accent)">mail</code>, and <code style="color:var(--accent)">department</code>).
     </p>
 
     <div style="display:flex;gap:8px;margin-bottom:16px">
@@ -91,13 +92,13 @@ function showImportModal() {
     </div>
 
     <div class="form-group">
-      <label>Paste JSON Array</label>
+      <label>Paste JSON or CSV</label>
       <textarea class="form-control" id="import-json" style="min-height:140px;font-family:monospace;font-size:0.8rem"
-        placeholder='[{"name":"Alice Johnson","team":"Engineering"},{"name":"Bob Smith","team":"HR","email":"bob@company.com"}]'></textarea>
+        placeholder='name,team,email\nAlice Johnson,Engineering,alice@company.com\nBob Smith,HR,bob@company.com'></textarea>
     </div>
 
     <div style="background:var(--bg3);border-radius:8px;padding:12px;font-size:0.8rem;color:var(--text2);margin-bottom:16px">
-      <strong>Microsoft Teams format:</strong> Export users from Admin Center as JSON with fields <code>displayName</code>, <code>mail</code>, <code>department</code>
+      <strong>Microsoft Teams format:</strong> Paste Microsoft Graph group members JSON such as <code>{"value":[{"displayName":"Alice Johnson","mail":"alice@company.com","department":"Engineering"}]}</code>, or upload a Teams/Azure CSV.
     </div>
 
     <div class="modal-footer">
@@ -127,21 +128,21 @@ function loadSampleImport() {
     {"displayName":"Frank Miller","mail":"frank@company.com","department":"Finance"},
     {"displayName":"Grace Kim","mail":"grace@company.com","department":"Engineering"}
   ];
-  document.getElementById('import-json').value = JSON.stringify(sample, null, 2);
+  document.getElementById('import-json').value = JSON.stringify({ value: sample }, null, 2);
 }
 
 function doImport() {
   const raw = document.getElementById('import-json').value.trim();
-  if (!raw) { toast('Paste JSON data first', 'error'); return; }
+  if (!raw) { toast('Paste JSON or CSV data first', 'error'); return; }
   let list;
   try {
-    list = JSON.parse(raw);
-    if (!Array.isArray(list)) list = [list];
+    list = CH.parsePeopleImport(raw);
   } catch(e) {
-    toast('Invalid JSON format', 'error'); return;
+    toast('Import failed: ' + e.message, 'error'); return;
   }
+  if (!Array.isArray(list) || list.length === 0) { toast('No people found in import data', 'error'); return; }
   const added = CH.importPeople(list);
-  toast(`Imported ${added} new people (${list.length - added} already existed)`, 'success');
+  toast(`Imported ${added} new people (${list.length - added} skipped as duplicates)`, 'success');
   closeAllModals();
   render();
 }

@@ -67,15 +67,70 @@ const CH = (() => {
     save(data);
   }
 
+  function normalizePeopleImport(input) {
+    if (!input) return [];
+    if (Array.isArray(input)) return input;
+    if (input.name || input.displayName || input.displayname || input.fullName || input.full_name) return [input];
+    // Microsoft Graph / Teams exports commonly wrap members in one of these arrays.
+    return input.value || input.members || input.users || input.people || input.roster || [];
+  }
+
+  function parseCSV(text) {
+    const rows = [];
+    let row = [], cell = '', quoted = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i], next = text[i + 1];
+      if (ch === '"' && quoted && next === '"') { cell += '"'; i++; continue; }
+      if (ch === '"') { quoted = !quoted; continue; }
+      if (ch === ',' && !quoted) { row.push(cell.trim()); cell = ''; continue; }
+      if ((ch === '\n' || ch === '\r') && !quoted) {
+        if (ch === '\r' && next === '\n') i++;
+        row.push(cell.trim());
+        if (row.some(Boolean)) rows.push(row);
+        row = []; cell = '';
+        continue;
+      }
+      cell += ch;
+    }
+    row.push(cell.trim());
+    if (row.some(Boolean)) rows.push(row);
+    if (rows.length === 0) return [];
+    const headers = rows.shift().map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
+    return rows.map(cols => {
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = cols[i] || ''; });
+      return {
+        name: obj.name || obj.displayname || obj.fullname || obj.givenname && obj.surname && `${obj.givenname} ${obj.surname}` || obj.userprincipalname || '',
+        team: obj.team || obj.department || obj.office || obj.jobtitle || '',
+        email: obj.email || obj.mail || obj.userprincipalname || obj.upn || ''
+      };
+    });
+  }
+
+  function parsePeopleImport(text) {
+    const raw = (text || '').trim();
+    if (!raw) return [];
+    if (raw[0] === '[' || raw[0] === '{') {
+      const parsed = JSON.parse(raw);
+      return normalizePeopleImport(parsed);
+    }
+    return parseCSV(raw);
+  }
+
   function importPeople(list) {
     const data = load();
     let added = 0;
-    list.forEach(p => {
-      const name = (p.name || p.displayName || p.full_name || '').trim();
+    normalizePeopleImport(list).forEach(p => {
+      const name = (p.name || p.displayName || p.displayname || p.full_name || p.fullName || '').trim();
       if (!name) return;
-      const exists = data.people.find(x => x.name.toLowerCase() === name.toLowerCase());
+      const team = (p.team || p.department || p.office || p.jobTitle || '').trim();
+      const email = (p.email || p.mail || p.userPrincipalName || p.upn || '').trim();
+      const exists = data.people.find(x =>
+        x.name.toLowerCase() === name.toLowerCase() ||
+        (email && (x.email || '').toLowerCase() === email.toLowerCase())
+      );
       if (!exists) {
-        data.people.push({ id: uid(), name, team: p.team || p.department || '', email: p.email || p.mail || '', avatar: '' });
+        data.people.push({ id: uid(), name, team, email, avatar: '' });
         added++;
       }
     });
@@ -250,6 +305,66 @@ const CH = (() => {
     }
   }
 
+  // ── Demo data ──────────────────────────────────────────────────────────────────
+  function createDemoData() {
+    const data = getDefault();
+    data.settings.orgName = 'CultureHub Demo Office';
+    const people = [
+      ['Avery Johnson','Engineering','avery@company.com'], ['Maya Chen','People Ops','maya@company.com'],
+      ['Noah Patel','Sales','noah@company.com'], ['Sofia Garcia','Finance','sofia@company.com'],
+      ['Liam Williams','Marketing','liam@company.com'], ['Emma Davis','Engineering','emma@company.com'],
+      ['Olivia Brown','Customer Success','olivia@company.com'], ['Ethan Kim','Product','ethan@company.com'],
+      ['Isabella Martinez','Design','isabella@company.com'], ['Lucas Smith','IT','lucas@company.com'],
+      ['Grace Lee','Legal','grace@company.com'], ['Henry Wilson','Operations','henry@company.com']
+    ].map(([name, team, email]) => ({ id: uid(), name, team, email, avatar: '' }));
+    data.people = people;
+    const byName = Object.fromEntries(people.map(p => [p.name, p.id]));
+    const addDemoEvent = (title, date, type, description, location, attendeeNames, winnerNames = [], gallery = []) => {
+      const event = { id: uid(), title, date, type, description, location, gallery, attendees: [] };
+      attendeeNames.forEach(name => {
+        const personId = byName[name];
+        if (!personId) return;
+        const isWinner = winnerNames.includes(name);
+        event.attendees.push({ personId, checkedIn: true, points: isWinner ? 3 : 1, isWinner });
+      });
+      data.events.push(event);
+    };
+    addDemoEvent('Spring Trivia Challenge', '2026-03-19', 'Game', 'Cross-team trivia with culture, product, and music rounds.', 'Cafe Commons',
+      ['Avery Johnson','Maya Chen','Noah Patel','Sofia Garcia','Liam Williams','Emma Davis','Olivia Brown','Ethan Kim','Isabella Martinez','Lucas Smith'],
+      ['Maya Chen','Ethan Kim']);
+    addDemoEvent('Volunteer Lunch Pack', '2026-04-11', 'Charity', 'Assembled lunch kits for a neighborhood nonprofit partner.', 'Conference Center',
+      ['Avery Johnson','Sofia Garcia','Emma Davis','Olivia Brown','Grace Lee','Henry Wilson']);
+    addDemoEvent('Mario Kart Bracket', '2026-04-25', 'Game', 'Single-elimination game bracket for bragging rights.', 'Game Room',
+      ['Noah Patel','Liam Williams','Emma Davis','Ethan Kim','Isabella Martinez','Lucas Smith','Grace Lee','Henry Wilson'],
+      ['Noah Patel']);
+    addDemoEvent('May Culture Potluck', '2026-05-16', 'Social', 'Team-hosted potluck with photo booth and story cards.', 'Rooftop Patio', []);
+    return data;
+  }
+
+  function seedDemoData(replace = false) {
+    if (replace) {
+      const data = createDemoData();
+      save(data);
+      return { people: data.people.length, events: data.events.length, replaced: true };
+    }
+    const demo = createDemoData();
+    const addedPeople = importPeople(demo.people);
+    const data = load();
+    demo.events.forEach(ev => {
+      if (!data.events.some(existing => existing.title === ev.title && existing.date === ev.date)) {
+        const newEvent = { ...ev, id: uid(), attendees: [] };
+        ev.attendees.forEach(a => {
+          const demoPerson = demo.people.find(p => p.id === a.personId);
+          const currentPerson = data.people.find(p => p.name === demoPerson?.name);
+          if (currentPerson) newEvent.attendees.push({ ...a, personId: currentPerson.id });
+        });
+        data.events.push(newEvent);
+      }
+    });
+    save(data);
+    return { people: addedPeople, events: demo.events.length, replaced: false };
+  }
+
   // ── Settings ──────────────────────────────────────────────────────────────────
   function getSettings() { return load().settings; }
   function saveSettings(updates) {
@@ -260,12 +375,12 @@ const CH = (() => {
 
   return {
     load, save, uid,
-    getPeople, addPerson, updatePerson, deletePerson, importPeople,
+    getPeople, addPerson, updatePerson, deletePerson, importPeople, parsePeopleImport,
     getEvents, addEvent, updateEvent, deleteEvent,
     addAttendee, removeAttendee, checkIn, undoCheckIn, toggleWinner,
     addGalleryImage, removeGalleryImage,
     getLeaderboard, getPersonStats,
-    exportBackup, importBackup,
+    exportBackup, importBackup, seedDemoData, createDemoData,
     getSettings, saveSettings
   };
 })();

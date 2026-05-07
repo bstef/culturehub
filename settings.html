@@ -62,41 +62,24 @@ async function clearAllData() {
 }
 
 function addSampleData() {
-  const people = [
-    {name:'Alice Johnson',team:'Engineering',email:'alice@co.com'},
-    {name:'Bob Smith',team:'Marketing',email:'bob@co.com'},
-    {name:'Carol White',team:'HR',email:'carol@co.com'},
-    {name:'David Lee',team:'Engineering',email:'david@co.com'},
-    {name:'Emma Davis',team:'Sales',email:'emma@co.com'},
-    {name:'Frank Miller',team:'Finance',email:'frank@co.com'},
-    {name:'Grace Kim',team:'Engineering',email:'grace@co.com'},
-    {name:'Henry Brown',team:'Marketing',email:'henry@co.com'},
-  ];
-  const addedNames = CH.importPeople(people);
-
-  const ids = CH.getPeople().filter(p => people.find(x=>x.name===p.name)).map(p=>p.id);
-
-  const ev1 = CH.addEvent('Summer Trivia Night', '2025-07-15', 'Game', 'Teams compete in company trivia!', 'Rooftop');
-  ids.forEach(id => CH.addAttendee(ev1.id, id));
-  [ids[0],ids[1],ids[2],ids[3],ids[4],ids[5]].forEach(id => { if(id) CH.checkIn(ev1.id, id); });
-  if (ids[0]) CH.toggleWinner(ev1.id, ids[0]);
-  if (ids[1]) CH.toggleWinner(ev1.id, ids[1]);
-
-  const ev2 = CH.addEvent('Team Bowling Night', '2025-08-22', 'Social', 'Friendly bowling competition at Lucky Strike!', 'Lucky Strike Lanes');
-  ids.forEach(id => CH.addAttendee(ev2.id, id));
-  [ids[2],ids[3],ids[4],ids[5],ids[6],ids[7]].forEach(id => { if(id) CH.checkIn(ev2.id, id); });
-  if (ids[6]) CH.toggleWinner(ev2.id, ids[6]);
-
-  const ev3 = CH.addEvent('Q3 Town Hall Social', '2025-09-10', 'Team Building', 'Post-town-hall mingling and food trucks', 'Courtyard');
-  ids.forEach(id => CH.addAttendee(ev3.id, id));
-  ids.forEach(id => { if(id) CH.checkIn(ev3.id, id); });
-
-  const ev4 = CH.addEvent('Halloween Costume Contest', '2025-10-31', 'Holiday', 'Best costume wins a prize!', 'Main Office');
-
-  toast('Sample data loaded! 8 people, 4 events added.', 'success');
+  const result = CH.seedDemoData(false);
+  toast(result.replaced
+    ? `Demo data loaded! ${result.people} people, ${result.events} events.`
+    : `Demo data merged! ${result.people} new people, ${result.events} demo events available.`,
+    'success');
   render();
 }
 
+async function replaceWithSampleData() {
+  const ok = await confirmDialog(
+    'Replace all current CultureHub data with the built-in demo roster, events, attendance, and scores?',
+    'Replace with Demo Data'
+  );
+  if (!ok) return;
+  const result = CH.seedDemoData(true);
+  toast(`Demo data loaded! ${result.people} people, ${result.events} events.`, 'success');
+  render();
+}
 function render() {
   const s = CH.getSettings();
   const data = CH.load();
@@ -153,8 +136,11 @@ function render() {
         <!-- Sample Data -->
         <div class="card">
           <div class="card-title">🧪 Demo & Testing</div>
-          <p style="color:var(--text2);font-size:0.875rem;margin-bottom:16px">Load sample data to explore CultureHub features with pre-populated people, events, and attendance.</p>
-          <button class="btn btn-secondary" onclick="addSampleData()">🎲 Load Sample Data</button>
+          <p style="color:var(--text2);font-size:0.875rem;margin-bottom:16px">Load the incorporated demo data to explore roster import, event attendance, winners, leaderboard scores, and upcoming TV dashboard content.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-secondary" onclick="addSampleData()">🎲 Merge Demo Data</button>
+            <button class="btn btn-ghost" onclick="replaceWithSampleData()">↺ Replace with Demo</button>
+          </div>
         </div>
       </div>
 
@@ -195,7 +181,7 @@ function render() {
         <div class="card">
           <div class="card-title">👥 Import from Team</div>
           <p style="color:var(--text2);font-size:0.875rem;margin-bottom:16px">
-            Import team members from a JSON file. Supports Microsoft Teams / Azure AD export format with <code style="color:var(--accent)">displayName</code>, <code style="color:var(--accent)">mail</code>, <code style="color:var(--accent)">department</code> fields.
+            Import team members from JSON or CSV. Supports Microsoft Teams / Azure AD group exports with <code style="color:var(--accent)">value</code>, <code style="color:var(--accent)">members</code>, or <code style="color:var(--accent)">users</code> arrays and fields like <code style="color:var(--accent)">displayName</code>, <code style="color:var(--accent)">mail</code>, and <code style="color:var(--accent)">department</code>.
           </p>
           <a href="roster.html" class="btn btn-secondary" style="width:100%;justify-content:center">
             📥 Go to Roster Import →
