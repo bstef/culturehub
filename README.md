@@ -44,7 +44,7 @@ Event Types: General · Game · Social · Team Building · Holiday · Charity
 ```
 
 ### 👥 Roster Management
-Maintain a living roster of your team with names, departments, and emails. Import in bulk from a JSON file — including **Microsoft Teams / Azure AD export format** (`displayName`, `mail`, `department`). No manual entry required.
+Maintain a living roster of your team with names, departments, and emails. Import in bulk from JSON or CSV — including **Microsoft Teams / Azure AD export format** (`displayName`, `mail`, `department`) and Microsoft Graph group responses with a top-level `value` member list. No manual entry required.
 
 ### ✅ Live Check-In
 The heart of CultureHub. Select an event, tap a card to check someone in, tap 🏆 to crown a winner.
@@ -80,7 +80,7 @@ One-click print-ready PDF reports for:
 - 👤 **Per Person** — individual history and score breakdown
 
 ### 💾 Backup & Restore
-Full JSON backup/restore — download your data anytime, restore from any backup file. Your data lives in `localStorage` but you own it completely.
+Full JSON backup/restore — download your data anytime, restore from any backup file. You can also export a self-contained embedded HTML backup that carries the current roster, events, attendance, and gallery data inside the file for easy archival. Your data lives in `localStorage` but you own it completely.
 
 ---
 

@@ -67,15 +67,35 @@ const CH = (() => {
     save(data);
   }
 
+  function unwrapImportList(input) {
+    if (Array.isArray(input)) return input;
+    if (!input || typeof input !== 'object') return [];
+    return input.people || input.members || input.users || input.value || input.data || [input];
+  }
+
+  function fieldValue(source, names) {
+    for (const name of names) {
+      if (source[name] !== undefined && source[name] !== null) return String(source[name]).trim();
+    }
+    return '';
+  }
+
   function importPeople(list) {
     const data = load();
+    const rows = unwrapImportList(list);
     let added = 0;
-    list.forEach(p => {
-      const name = (p.name || p.displayName || p.full_name || '').trim();
+    rows.forEach(p => {
+      if (!p || typeof p !== 'object') return;
+      const name = fieldValue(p, ['name', 'displayName', 'full_name', 'fullName', 'Name', 'Display Name']);
       if (!name) return;
-      const exists = data.people.find(x => x.name.toLowerCase() === name.toLowerCase());
+      const email = fieldValue(p, ['email', 'mail', 'userPrincipalName', 'Email', 'Email Address']);
+      const team = fieldValue(p, ['team', 'department', 'group', 'groupName', 'officeLocation', 'Team', 'Department']);
+      const exists = data.people.find(x =>
+        x.name.toLowerCase() === name.toLowerCase() ||
+        (email && (x.email || '').toLowerCase() === email.toLowerCase())
+      );
       if (!exists) {
-        data.people.push({ id: uid(), name, team: p.team || p.department || '', email: p.email || p.mail || '', avatar: '' });
+        data.people.push({ id: uid(), name, team, email, avatar: '' });
         added++;
       }
     });
@@ -230,13 +250,56 @@ const CH = (() => {
   }
 
   // ── Import / Export ──────────────────────────────────────────────────────────
-  function exportBackup() {
-    const data = load();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  function downloadText(filename, text, type = 'application/json') {
+    const blob = new Blob([text], { type });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `culturehub-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.download = filename;
     a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function exportBackup() {
+    const data = load();
+    downloadText(
+      `culturehub-backup-${new Date().toISOString().slice(0,10)}.json`,
+      JSON.stringify(data, null, 2)
+    );
+  }
+
+  function exportEmbeddedBackup() {
+    const data = JSON.stringify(load());
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CultureHub Embedded Backup</title>
+<style>body{font-family:Arial,sans-serif;max-width:760px;margin:48px auto;padding:0 24px;line-height:1.5;color:#1a1a2e}button{border:0;border-radius:10px;background:#6c63ff;color:#fff;padding:12px 18px;font-weight:700;cursor:pointer}pre{background:#f5f3ff;border:1px solid #ddd;border-radius:12px;padding:16px;overflow:auto;max-height:280px}</style>
+</head>
+<body>
+<h1>🎯 CultureHub Embedded Backup</h1>
+<p>This single HTML file contains your CultureHub roster, events, attendance, and gallery data. Keep it as a portable backup, then restore it in the same browser before opening CultureHub.</p>
+<button onclick="restoreCultureHubData()">Restore this backup to this browser</button>
+<p id="status"></p>
+<h2>Included data preview</h2>
+<pre id="preview"></pre>
+<script id="culturehub-embedded-data" type="application/json">${data.replace(/<\//g, '<\\/')}</script>
+<script>
+function restoreCultureHubData(){
+  var raw = document.getElementById('culturehub-embedded-data').textContent;
+  localStorage.setItem('culturehub_data', raw);
+  document.getElementById('status').textContent = 'Restored. Open index.html from your CultureHub folder to view the tracker.';
+}
+document.getElementById('preview').textContent = JSON.stringify(JSON.parse(document.getElementById('culturehub-embedded-data').textContent), null, 2);
+<\/script>
+</body>
+</html>`;
+    downloadText(
+      `culturehub-embedded-backup-${new Date().toISOString().slice(0,10)}.html`,
+      html,
+      'text/html'
+    );
   }
 
   function importBackup(jsonStr) {
@@ -265,7 +328,7 @@ const CH = (() => {
     addAttendee, removeAttendee, checkIn, undoCheckIn, toggleWinner,
     addGalleryImage, removeGalleryImage,
     getLeaderboard, getPersonStats,
-    exportBackup, importBackup,
+    exportBackup, exportEmbeddedBackup, importBackup,
     getSettings, saveSettings
   };
 })();

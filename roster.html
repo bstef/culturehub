@@ -80,24 +80,28 @@ function showImportModal() {
       <button class="modal-close" onclick="closeModal(this)">✕</button>
     </div>
     <p style="color:var(--text2);font-size:0.875rem;margin-bottom:16px">
-      Import from a JSON file or paste JSON data. Supports fields: <code style="color:var(--accent)">name</code>, <code style="color:var(--accent)">team</code>, <code style="color:var(--accent)">email</code>.
-      Also works with Microsoft Teams / Azure AD export format (<code style="color:var(--accent)">displayName</code>, <code style="color:var(--accent)">mail</code>).
+      Import a roster from JSON or CSV. CultureHub supports simple columns
+      (<code style="color:var(--accent)">name</code>, <code style="color:var(--accent)">team</code>, <code style="color:var(--accent)">email</code>),
+      Microsoft Teams / Azure AD group exports
+      (<code style="color:var(--accent)">displayName</code>, <code style="color:var(--accent)">mail</code>, <code style="color:var(--accent)">department</code>),
+      and Microsoft Graph responses with a top-level <code style="color:var(--accent)">value</code> array.
     </p>
 
-    <div style="display:flex;gap:8px;margin-bottom:16px">
-      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('import-file').click()">📂 Load JSON File</button>
-      <input type="file" id="import-file" accept=".json,.csv" style="display:none" onchange="loadImportFile(event)"/>
-      <button class="btn btn-ghost btn-sm" onclick="loadSampleImport()">Try Sample Data</button>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('import-file').click()">📂 Load JSON / CSV File</button>
+      <input type="file" id="import-file" accept=".json,.csv,.txt" style="display:none" onchange="loadImportFile(event)"/>
+      <button class="btn btn-ghost btn-sm" onclick="loadSampleImport()">JSON Sample</button>
+      <button class="btn btn-ghost btn-sm" onclick="loadSampleCsvImport()">CSV Sample</button>
     </div>
 
     <div class="form-group">
-      <label>Paste JSON Array</label>
-      <textarea class="form-control" id="import-json" style="min-height:140px;font-family:monospace;font-size:0.8rem"
-        placeholder='[{"name":"Alice Johnson","team":"Engineering"},{"name":"Bob Smith","team":"HR","email":"bob@company.com"}]'></textarea>
+      <label>Paste JSON, Teams group JSON, or CSV</label>
+      <textarea class="form-control" id="import-json" style="min-height:160px;font-family:monospace;font-size:0.8rem"
+        placeholder='name,team,email\nAlice Johnson,Engineering,alice@company.com\nBob Smith,HR,bob@company.com'></textarea>
     </div>
 
     <div style="background:var(--bg3);border-radius:8px;padding:12px;font-size:0.8rem;color:var(--text2);margin-bottom:16px">
-      <strong>Microsoft Teams format:</strong> Export users from Admin Center as JSON with fields <code>displayName</code>, <code>mail</code>, <code>department</code>
+      <strong>Team group tip:</strong> Paste the member list from Microsoft Teams, Azure AD, or Graph. Duplicate names/emails are skipped automatically.
     </div>
 
     <div class="modal-footer">
@@ -118,37 +122,81 @@ function loadImportFile(e) {
 }
 
 function loadSampleImport() {
-  const sample = [
-    {"name":"Alice Johnson","team":"Engineering","email":"alice@company.com"},
-    {"name":"Bob Smith","team":"Marketing","email":"bob@company.com"},
-    {"name":"Carol White","team":"HR","email":"carol@company.com"},
-    {"name":"David Lee","team":"Engineering","email":"david@company.com"},
-    {"name":"Emma Davis","team":"Sales","email":"emma@company.com"},
-    {"displayName":"Frank Miller","mail":"frank@company.com","department":"Finance"},
-    {"displayName":"Grace Kim","mail":"grace@company.com","department":"Engineering"}
-  ];
+  const sample = {
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#groups('culture-team')/members",
+    "value": [
+      {"displayName":"Alice Johnson","mail":"alice@company.com","department":"Engineering"},
+      {"displayName":"Bob Smith","mail":"bob@company.com","department":"Marketing"},
+      {"displayName":"Carol White","mail":"carol@company.com","department":"HR"},
+      {"displayName":"David Lee","mail":"david@company.com","department":"Engineering"},
+      {"displayName":"Emma Davis","mail":"emma@company.com","department":"Sales"}
+    ]
+  };
   document.getElementById('import-json').value = JSON.stringify(sample, null, 2);
+}
+
+function loadSampleCsvImport() {
+  document.getElementById('import-json').value = [
+    'name,team,email',
+    'Frank Miller,Finance,frank@company.com',
+    'Grace Kim,Engineering,grace@company.com',
+    'Henry Brown,Marketing,henry@company.com'
+  ].join('\n');
+}
+
+function parseCsvRows(raw) {
+  const rows = raw.split(/\r?\n/).filter(line => line.trim());
+  if (rows.length < 2) return [];
+  const parseLine = line => {
+    const out = [];
+    let cell = '', inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      const next = line[i + 1];
+      if (ch === '"' && inQuotes && next === '"') { cell += '"'; i++; }
+      else if (ch === '"') inQuotes = !inQuotes;
+      else if (ch === ',' && !inQuotes) { out.push(cell.trim()); cell = ''; }
+      else cell += ch;
+    }
+    out.push(cell.trim());
+    return out;
+  };
+  const headers = parseLine(rows[0]).map(h => h.trim());
+  return rows.slice(1).map(line => {
+    const values = parseLine(line);
+    return headers.reduce((obj, h, i) => ({ ...obj, [h]: values[i] || '' }), {});
+  });
+}
+
+function normalizeImportPayload(raw) {
+  try {
+    const parsed = JSON.parse(raw);
+    const list = Array.isArray(parsed) ? parsed : (parsed.people || parsed.members || parsed.users || parsed.value || parsed.data || [parsed]);
+    return { list, total: list.length };
+  } catch(e) {
+    const list = parseCsvRows(raw);
+    if (list.length === 0) throw new Error('Invalid JSON or CSV format');
+    return { list, total: list.length };
+  }
 }
 
 function doImport() {
   const raw = document.getElementById('import-json').value.trim();
-  if (!raw) { toast('Paste JSON data first', 'error'); return; }
-  let list;
+  if (!raw) { toast('Paste JSON or CSV data first', 'error'); return; }
+  let payload;
   try {
-    list = JSON.parse(raw);
-    if (!Array.isArray(list)) list = [list];
+    payload = normalizeImportPayload(raw);
   } catch(e) {
-    toast('Invalid JSON format', 'error'); return;
+    toast(e.message, 'error'); return;
   }
-  const added = CH.importPeople(list);
-  toast(`Imported ${added} new people (${list.length - added} already existed)`, 'success');
+  const added = CH.importPeople(payload.list);
+  toast(`Imported ${added} new people (${payload.total - added} already existed or were skipped)`, 'success');
   closeAllModals();
   render();
 }
 
 function getTeams() {
-  const teams = [...new Set(CH.getPeople().map(p => p.team).filter(Boolean))].sort();
-  return teams;
+  return [...new Set(CH.getPeople().map(p => p.team).filter(Boolean))].sort();
 }
 
 function render() {

@@ -169,7 +169,10 @@ function render() {
           <button class="btn btn-primary" onclick="CH.exportBackup()" style="width:100%;justify-content:center;margin-bottom:8px">
             💾 Download Backup JSON
           </button>
-          <p style="font-size:0.78rem;color:var(--text3)">Keep backups regularly. Data is stored in your browser's localStorage.</p>
+          <button class="btn btn-secondary" onclick="CH.exportEmbeddedBackup()" style="width:100%;justify-content:center;margin-bottom:8px">
+            📦 Download Embedded HTML Backup
+          </button>
+          <p style="font-size:0.78rem;color:var(--text3)">Keep backups regularly. JSON is best for restore; embedded HTML keeps a portable self-contained copy of the same data.</p>
         </div>
 
         <!-- Restore -->
@@ -195,7 +198,7 @@ function render() {
         <div class="card">
           <div class="card-title">👥 Import from Team</div>
           <p style="color:var(--text2);font-size:0.875rem;margin-bottom:16px">
-            Import team members from a JSON file. Supports Microsoft Teams / Azure AD export format with <code style="color:var(--accent)">displayName</code>, <code style="color:var(--accent)">mail</code>, <code style="color:var(--accent)">department</code> fields.
+            Import team members from JSON, CSV, Microsoft Teams / Azure AD group exports, or Microsoft Graph group responses with a <code style="color:var(--accent)">value</code> member array.
           </p>
           <a href="roster.html" class="btn btn-secondary" style="width:100%;justify-content:center">
             📥 Go to Roster Import →
