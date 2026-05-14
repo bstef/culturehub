@@ -159,11 +159,39 @@ const SAMPLE_SIZE_CONFIG = {
   large:  { count: 40, eventCount: 10, label: '40 people · 10 events' },
 };
 
-function addSampleData(size = 'small') {
-  const cfg = SAMPLE_SIZE_CONFIG[size];
-  const data = CH.load();
+function hasDemoData() {
+  const people = CH.getPeople();
+  const demoNames = new Set(SAMPLE_PEOPLE.map(p => p.name.toLowerCase()));
+  return people.some(p => demoNames.has(p.name.toLowerCase()));
+}
 
-  // Add people, skipping duplicates
+function stripDemoData(data) {
+  const demoNames   = new Set(SAMPLE_PEOPLE.map(p => p.name.toLowerCase()));
+  const demoTitles  = new Set(SAMPLE_EVENTS.map(e => e.title.toLowerCase()));
+  const removedIds  = new Set(data.people.filter(p => demoNames.has(p.name.toLowerCase())).map(p => p.id));
+  data.people = data.people.filter(p => !demoNames.has(p.name.toLowerCase()));
+  data.events = data.events.filter(e => !demoTitles.has(e.title.toLowerCase()));
+  // Drop orphaned attendee refs from remaining events
+  data.events.forEach(e => {
+    e.attendees = e.attendees.filter(a => !removedIds.has(a.personId));
+  });
+  return data;
+}
+
+async function addSampleData(size = 'small') {
+  const cfg = SAMPLE_SIZE_CONFIG[size];
+
+  if (hasDemoData()) {
+    const ok = await confirmDialog(
+      `Demo data is already loaded.<br><br>Remove the existing demo data and load the <strong>${cfg.label}</strong> dataset instead?`,
+      'Replace Demo Data'
+    );
+    if (!ok) return;
+  }
+
+  const data = hasDemoData() ? stripDemoData(CH.load()) : CH.load();
+
+  // Add people
   const people = SAMPLE_PEOPLE.slice(0, cfg.count);
   people.forEach(p => {
     if (!data.people.find(x => x.name.toLowerCase() === p.name.toLowerCase())) {
@@ -171,14 +199,14 @@ function addSampleData(size = 'small') {
     }
   });
 
-  // Build index → id map for quick lookup
+  // Build index → id map
   const idMap = {};
   people.forEach((p, i) => {
     const found = data.people.find(x => x.name.toLowerCase() === p.name.toLowerCase());
     if (found) idMap[i] = found.id;
   });
 
-  // Build events in memory and push in one save
+  // Build events in one save
   SAMPLE_EVENTS.slice(0, cfg.eventCount).forEach(ev => {
     const event = {
       id: CH.uid(), title: ev.title, date: ev.date, type: ev.type,
