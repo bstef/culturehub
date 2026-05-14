@@ -61,39 +61,143 @@ async function clearAllData() {
   window.location.href = 'index.html';
 }
 
-function addSampleData() {
-  const people = [
-    {name:'Alice Johnson',team:'Engineering',email:'alice@co.com'},
-    {name:'Bob Smith',team:'Marketing',email:'bob@co.com'},
-    {name:'Carol White',team:'HR',email:'carol@co.com'},
-    {name:'David Lee',team:'Engineering',email:'david@co.com'},
-    {name:'Emma Davis',team:'Sales',email:'emma@co.com'},
-    {name:'Frank Miller',team:'Finance',email:'frank@co.com'},
-    {name:'Grace Kim',team:'Engineering',email:'grace@co.com'},
-    {name:'Henry Brown',team:'Marketing',email:'henry@co.com'},
-  ];
-  const addedNames = CH.importPeople(people);
+const SAMPLE_PEOPLE = [
+  // Small core (0-7)
+  {name:'Alice Johnson',  team:'Engineering', email:'alice@co.com'},
+  {name:'Bob Smith',      team:'Marketing',   email:'bob@co.com'},
+  {name:'Carol White',    team:'HR',          email:'carol@co.com'},
+  {name:'David Lee',      team:'Engineering', email:'david@co.com'},
+  {name:'Emma Davis',     team:'Sales',       email:'emma@co.com'},
+  {name:'Frank Miller',   team:'Finance',     email:'frank@co.com'},
+  {name:'Grace Kim',      team:'Engineering', email:'grace@co.com'},
+  {name:'Henry Brown',    team:'Marketing',   email:'henry@co.com'},
+  // Medium additions (8-19)
+  {name:'Isabel Torres',  team:'HR',          email:'isabel@co.com'},
+  {name:'James Park',     team:'Engineering', email:'james@co.com'},
+  {name:'Karen Nguyen',   team:'Sales',       email:'karen@co.com'},
+  {name:'Liam Foster',    team:'Design',      email:'liam@co.com'},
+  {name:'Maya Patel',     team:'Product',     email:'maya@co.com'},
+  {name:'Nathan Brooks',  team:'Engineering', email:'nathan@co.com'},
+  {name:'Olivia Chen',    team:'Marketing',   email:'olivia@co.com'},
+  {name:'Peter Walsh',    team:'Finance',     email:'peter@co.com'},
+  {name:'Quinn Adams',    team:'Sales',       email:'quinn@co.com'},
+  {name:'Rachel Green',   team:'Design',      email:'rachel@co.com'},
+  {name:'Sam Taylor',     team:'Product',     email:'sam@co.com'},
+  {name:'Tina Rivera',    team:'HR',          email:'tina@co.com'},
+  // Large additions (20-39)
+  {name:'Uma Scott',      team:'Engineering', email:'uma@co.com'},
+  {name:'Victor Okafor',  team:'Marketing',   email:'victor@co.com'},
+  {name:'Wendy Chang',    team:'Operations',  email:'wendy@co.com'},
+  {name:'Xavier Murphy',  team:'Sales',       email:'xavier@co.com'},
+  {name:'Yara Hassan',    team:'HR',          email:'yara@co.com'},
+  {name:'Zoe Robinson',   team:'Finance',     email:'zoe@co.com'},
+  {name:'Aaron Kim',      team:'Engineering', email:'aaron@co.com'},
+  {name:'Bella Martinez', team:'Product',     email:'bella@co.com'},
+  {name:'Carlos Dubois',  team:'Design',      email:'carlos@co.com'},
+  {name:'Diana Ross',     team:'Marketing',   email:'diana@co.com'},
+  {name:'Ethan Clark',    team:'Engineering', email:'ethan@co.com'},
+  {name:'Fiona Campbell', team:'Sales',       email:'fiona@co.com'},
+  {name:'George Huang',   team:'Finance',     email:'george@co.com'},
+  {name:'Hannah Lee',     team:'Operations',  email:'hannah@co.com'},
+  {name:'Ivan Petrov',    team:'Engineering', email:'ivan@co.com'},
+  {name:'Julia Santos',   team:'HR',          email:'julia@co.com'},
+  {name:'Kyle Thompson',  team:'Product',     email:'kyle@co.com'},
+  {name:'Luna Walker',    team:'Design',      email:'luna@co.com'},
+  {name:'Marco Reyes',    team:'Sales',       email:'marco@co.com'},
+  {name:'Nina Johansson', team:'Marketing',   email:'nina@co.com'},
+];
 
-  const ids = CH.getPeople().filter(p => people.find(x=>x.name===p.name)).map(p=>p.id);
+// a=attendee indices, c=checked-in indices, w=winner indices (all into SAMPLE_PEOPLE)
+const SAMPLE_EVENTS = [
+  { title:'Summer Trivia Night',        date:'2025-07-15', type:'Game',
+    description:'Teams compete in company trivia!', location:'Rooftop',
+    a:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39],
+    c:[0,1,2,3,4,5,8,9,10,11,12,13,20,21,22,23,24,25,26,27,28,29,30,31], w:[0,4] },
+  { title:'Team Bowling Night',          date:'2025-08-22', type:'Social',
+    description:'Friendly bowling competition at Lucky Strike!', location:'Lucky Strike Lanes',
+    a:[0,1,2,3,4,5,6,7,8,9,10,11,14,15,16,17,18,19,21,22,23,24,26,27,28,29,32,33,34,35,36,37],
+    c:[2,3,4,5,6,7,8,10,14,16,18,22,24,26,28,32,34,36], w:[6] },
+  { title:'Q3 Town Hall Social',         date:'2025-09-10', type:'Team Building',
+    description:'Post-town-hall mingling and food trucks', location:'Courtyard',
+    a:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39],
+    c:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33], w:[] },
+  // Medium+
+  { title:'Halloween Costume Contest',   date:'2025-10-31', type:'Holiday',
+    description:'Best costume wins a prize!', location:'Main Office',
+    a:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35],
+    c:[0,1,3,4,6,8,9,10,11,12,14,16,17,18,20,21,22,23,24,25,26,27,28,29,30,31,32], w:[0,8] },
+  { title:'Charity Food Drive Kickoff',  date:'2025-11-05', type:'Charity',
+    description:'Kick off our annual food drive — donations matched by the company!', location:'Cafeteria',
+    a:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39],
+    c:[1,2,3,5,7,8,9,10,12,13,14,15,17,19,21,22,23,25,26,27,28,29,30,31,32,33,34,35,36,37], w:[12] },
+  { title:'Holiday Party',               date:'2025-12-13', type:'Holiday',
+    description:'Annual holiday celebration with dinner, awards, and dancing!', location:'Grand Ballroom',
+    a:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39],
+    c:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,28,29,30,31,32,34,35,36,37,38], w:[1,9,21] },
+  // Large+
+  { title:'New Year Kickoff Breakfast',  date:'2026-01-10', type:'Team Building',
+    description:'Start the new year right — company goals, team shoutouts, and breakfast!', location:'Conference Room A',
+    a:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39],
+    c:[0,2,3,4,5,6,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,24,25,26,27,28,29,30,31,32,33,34,35,36,38,39], w:[20,28] },
+  { title:"Valentine's Bake-Off",        date:'2026-02-14', type:'Game',
+    description:'Bring your best baked goods — judges will crown the top treat!', location:'Break Room',
+    a:[0,2,3,4,5,6,8,9,10,11,12,13,15,16,17,18,20,21,22,23,24,25,26,27,28,29,30,31,34,35,36,37,38,39],
+    c:[0,3,4,5,6,9,10,12,16,17,18,21,22,24,25,27,28,30,34,36,38,39], w:[0,5,22] },
+  { title:"St. Patrick's Team Trivia",   date:'2026-03-17', type:'Game',
+    description:'Green attire encouraged — trivia brackets with prizes for the top team!', location:'Rooftop Bar',
+    a:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35],
+    c:[0,1,2,4,5,6,7,8,9,11,12,13,14,16,18,19,20,21,23,24,25,26,27,28,29,31,32,33], w:[4,33] },
+  { title:'Spring Wellness Day',         date:'2026-04-22', type:'Team Building',
+    description:'Yoga, outdoor games, and a meditation session for the whole company!', location:'Company Park',
+    a:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39],
+    c:[0,1,2,3,4,5,6,7,8,9,10,11,12,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,30,31,32,33,34,35,36,37,38,39], w:[15] },
+];
 
-  const ev1 = CH.addEvent('Summer Trivia Night', '2025-07-15', 'Game', 'Teams compete in company trivia!', 'Rooftop');
-  ids.forEach(id => CH.addAttendee(ev1.id, id));
-  [ids[0],ids[1],ids[2],ids[3],ids[4],ids[5]].forEach(id => { if(id) CH.checkIn(ev1.id, id); });
-  if (ids[0]) CH.toggleWinner(ev1.id, ids[0]);
-  if (ids[1]) CH.toggleWinner(ev1.id, ids[1]);
+const SAMPLE_SIZE_CONFIG = {
+  small:  { count: 8,  eventCount: 3,  label: '8 people · 3 events' },
+  medium: { count: 20, eventCount: 6,  label: '20 people · 6 events' },
+  large:  { count: 40, eventCount: 10, label: '40 people · 10 events' },
+};
 
-  const ev2 = CH.addEvent('Team Bowling Night', '2025-08-22', 'Social', 'Friendly bowling competition at Lucky Strike!', 'Lucky Strike Lanes');
-  ids.forEach(id => CH.addAttendee(ev2.id, id));
-  [ids[2],ids[3],ids[4],ids[5],ids[6],ids[7]].forEach(id => { if(id) CH.checkIn(ev2.id, id); });
-  if (ids[6]) CH.toggleWinner(ev2.id, ids[6]);
+function addSampleData(size = 'small') {
+  const cfg = SAMPLE_SIZE_CONFIG[size];
+  const data = CH.load();
 
-  const ev3 = CH.addEvent('Q3 Town Hall Social', '2025-09-10', 'Team Building', 'Post-town-hall mingling and food trucks', 'Courtyard');
-  ids.forEach(id => CH.addAttendee(ev3.id, id));
-  ids.forEach(id => { if(id) CH.checkIn(ev3.id, id); });
+  // Add people, skipping duplicates
+  const people = SAMPLE_PEOPLE.slice(0, cfg.count);
+  people.forEach(p => {
+    if (!data.people.find(x => x.name.toLowerCase() === p.name.toLowerCase())) {
+      data.people.push({ id: CH.uid(), name: p.name, team: p.team, email: p.email, avatar: '' });
+    }
+  });
 
-  const ev4 = CH.addEvent('Halloween Costume Contest', '2025-10-31', 'Holiday', 'Best costume wins a prize!', 'Main Office');
+  // Build index → id map for quick lookup
+  const idMap = {};
+  people.forEach((p, i) => {
+    const found = data.people.find(x => x.name.toLowerCase() === p.name.toLowerCase());
+    if (found) idMap[i] = found.id;
+  });
 
-  toast('Sample data loaded! 8 people, 4 events added.', 'success');
+  // Build events in memory and push in one save
+  SAMPLE_EVENTS.slice(0, cfg.eventCount).forEach(ev => {
+    const event = {
+      id: CH.uid(), title: ev.title, date: ev.date, type: ev.type,
+      description: ev.description, location: ev.location,
+      gallery: [], attendees: []
+    };
+    const checkinSet = new Set(ev.c.filter(i => idMap[i]).map(i => idMap[i]));
+    const winnerSet  = new Set(ev.w.filter(i => idMap[i]).map(i => idMap[i]));
+    ev.a.filter(i => idMap[i]).forEach(i => {
+      const personId  = idMap[i];
+      const checkedIn = checkinSet.has(personId);
+      const isWinner  = checkedIn && winnerSet.has(personId);
+      event.attendees.push({ personId, checkedIn, points: isWinner ? 3 : checkedIn ? 1 : 0, isWinner });
+    });
+    data.events.push(event);
+  });
+
+  CH.save(data);
+  toast(`Sample data loaded! ${cfg.label} added.`, 'success');
   render();
 }
 
@@ -398,8 +502,22 @@ function render() {
         <!-- Sample Data -->
         <div class="card">
           <div class="card-title">🧪 Demo & Testing</div>
-          <p style="color:var(--text2);font-size:0.875rem;margin-bottom:16px">Load sample data to explore CultureHub features with pre-populated people, events, and attendance.</p>
-          <button class="btn btn-secondary" onclick="addSampleData()">🎲 Load Sample Data</button>
+          <p style="color:var(--text2);font-size:0.875rem;margin-bottom:12px">Load sample data to explore CultureHub with pre-populated people, events, and attendance.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+            <button class="btn btn-secondary" onclick="addSampleData('small')" style="flex-direction:column;align-items:center;gap:3px;padding:12px 8px">
+              <span>🏠 Small</span>
+              <span style="font-size:0.7rem;color:var(--text3)">8 people · 3 events</span>
+            </button>
+            <button class="btn btn-secondary" onclick="addSampleData('medium')" style="flex-direction:column;align-items:center;gap:3px;padding:12px 8px">
+              <span>🏢 Medium</span>
+              <span style="font-size:0.7rem;color:var(--text3)">20 people · 6 events</span>
+            </button>
+            <button class="btn btn-secondary" onclick="addSampleData('large')" style="flex-direction:column;align-items:center;gap:3px;padding:12px 8px">
+              <span>🏙 Large</span>
+              <span style="font-size:0.7rem;color:var(--text3)">40 people · 10 events</span>
+            </button>
+          </div>
+          <p style="font-size:0.78rem;color:var(--text3)">Existing people won't be duplicated.</p>
         </div>
       </div>
 
