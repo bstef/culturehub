@@ -29,7 +29,15 @@ const CH = (() => {
   }
 
   function save(data) {
-    localStorage.setItem(KEY, JSON.stringify(data));
+    try {
+      localStorage.setItem(KEY, JSON.stringify(data));
+    } catch (e) {
+      if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+        window.dispatchEvent(new CustomEvent('culturehub:quota-exceeded'));
+        throw e;
+      }
+      throw e;
+    }
     window.dispatchEvent(new CustomEvent('culturehub:updated', { detail: data }));
   }
 

@@ -150,8 +150,17 @@ function handleFiles(files, eventId) {
   imgs.forEach(file => {
     const reader = new FileReader();
     reader.onload = e => {
-      CH.addGalleryImage(eventId, e.target.result, '');
-      toast('Photo added!', 'success');
+      try {
+        CH.addGalleryImage(eventId, e.target.result, '');
+        toast('Photo added!', 'success');
+        render();
+      } catch (err) {
+        if (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+          toast('Storage full — download a backup then delete some photos to free space.', 'error', 6000);
+        } else {
+          toast('Failed to save photo', 'error');
+        }
+      }
     };
     reader.readAsDataURL(file);
   });
