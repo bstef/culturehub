@@ -97,12 +97,25 @@ function addSampleData() {
   render();
 }
 
+let lbExportSize = 10;
+
+function setLbSize(n) {
+  lbExportSize = n;
+  [3,5,10,15,25].forEach(x => {
+    const btn = document.getElementById('lb-size-' + x);
+    if (!btn) return;
+    btn.className = 'btn btn-sm ' + (x === n ? 'btn-primary' : 'btn-secondary');
+    btn.style.minWidth = '44px';
+    btn.style.justifyContent = 'center';
+  });
+}
+
 function exportLeaderboardImage() {
   const lb = CH.getLeaderboard();
   const s = CH.getSettings();
   if (!lb.length) { toast('No leaderboard data yet', 'info'); return; }
 
-  const top = lb.slice(0, 15);
+  const top = lb.slice(0, lbExportSize);
   const W = 600, ROW_H = 44, HEADER_H = 96, COL_H = 28, FOOTER_H = 40;
   const H = HEADER_H + COL_H + top.length * ROW_H + FOOTER_H;
 
@@ -210,7 +223,7 @@ function exportLeaderboardImage() {
   ctx.fillRect(0, H - 4, W, 4);
 
   const link = document.createElement('a');
-  link.download = 'leaderboard-' + new Date().toISOString().slice(0, 10) + '.png';
+  link.download = 'leaderboard-top' + lbExportSize + '-' + new Date().toISOString().slice(0, 10) + '.png';
   link.href = canvas.toDataURL('image/png');
   link.click();
   toast('Leaderboard image saved!', 'success');
@@ -237,7 +250,8 @@ function printLeaderboard() {
   if (!lb.length) { toast('No leaderboard data yet', 'info'); return; }
 
   const medals = ['🥇', '🥈', '🥉'];
-  const rows = lb.map((e, i) => `
+  const top = lb.slice(0, lbExportSize);
+  const rows = top.map((e, i) => `
     <tr class="${i < 3 ? 'top' + (i + 1) : ''}">
       <td class="rank">${i < 3 ? medals[i] : '#' + (i + 1)}</td>
       <td class="name">${e.person.name}</td>
@@ -247,8 +261,8 @@ function printLeaderboard() {
       <td class="pts">${e.points}</td>
     </tr>`).join('');
 
-  const totalPts = lb.reduce((a, e) => a + e.points, 0);
-  const totalCheckins = lb.reduce((a, e) => a + e.events, 0);
+  const totalPts = top.reduce((a, e) => a + e.points, 0);
+  const totalCheckins = top.reduce((a, e) => a + e.events, 0);
 
   const html = `<!DOCTYPE html><html><head>
 <meta charset="UTF-8"/>
@@ -286,12 +300,12 @@ function printLeaderboard() {
 <div class="header">
   <div>
     <div class="org">🎯 ${s.orgName || 'CultureHub'} — Leaderboard</div>
-    <div class="sub">Culture Event Rankings · All Members</div>
+    <div class="sub">Culture Event Rankings · Top ${lbExportSize}</div>
   </div>
   <div class="date">Printed ${new Date().toLocaleString()}</div>
 </div>
 <div class="stats">
-  <div class="stat"><div class="stat-n">${lb.length}</div><div class="stat-l">Members</div></div>
+  <div class="stat"><div class="stat-n">${top.length}</div><div class="stat-l">Members</div></div>
   <div class="stat"><div class="stat-n">${totalCheckins}</div><div class="stat-l">Total Check-Ins</div></div>
   <div class="stat"><div class="stat-n">${totalPts}</div><div class="stat-l">Total Points</div></div>
   <div class="stat"><div class="stat-n">${lb[0] ? lb[0].person.name.split(' ')[0] : '—'}</div><div class="stat-l">Top Member</div></div>
@@ -365,9 +379,15 @@ function render() {
         <!-- Leaderboard Export -->
         <div class="card">
           <div class="card-title">🏆 Leaderboard Export</div>
-          <p style="color:var(--text2);font-size:0.875rem;margin-bottom:16px">
+          <p style="color:var(--text2);font-size:0.875rem;margin-bottom:12px">
             Share or print the current leaderboard standings.
           </p>
+          <div style="margin-bottom:14px">
+            <div style="font-size:0.75rem;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Top N members</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap" id="lb-size-btns">
+              ${[3,5,10,15,25].map(n => `<button class="btn btn-sm${n===10?' btn-primary':' btn-secondary'}" onclick="setLbSize(${n})" id="lb-size-${n}" style="min-width:44px;justify-content:center">${n}</button>`).join('')}
+            </div>
+          </div>
           <div style="display:flex;gap:8px">
             <button class="btn btn-secondary" onclick="exportLeaderboardImage()" style="flex:1;justify-content:center">📧 Email Image</button>
             <button class="btn btn-secondary" onclick="printLeaderboard()" style="flex:1;justify-content:center">🖨 Print 8.5×11</button>
