@@ -97,6 +97,218 @@ function addSampleData() {
   render();
 }
 
+function exportLeaderboardImage() {
+  const lb = CH.getLeaderboard();
+  const s = CH.getSettings();
+  if (!lb.length) { toast('No leaderboard data yet', 'info'); return; }
+
+  const top = lb.slice(0, 15);
+  const W = 600, ROW_H = 44, HEADER_H = 96, COL_H = 28, FOOTER_H = 40;
+  const H = HEADER_H + COL_H + top.length * ROW_H + FOOTER_H;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W * 2; canvas.height = H * 2;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(2, 2);
+
+  // Background
+  ctx.fillStyle = '#07090f';
+  ctx.fillRect(0, 0, W, H);
+
+  // Top accent bar
+  const barGrad = ctx.createLinearGradient(0, 0, W, 0);
+  barGrad.addColorStop(0, '#00c9b1'); barGrad.addColorStop(1, '#5b9cf6');
+  ctx.fillStyle = barGrad;
+  ctx.fillRect(0, 0, W, 4);
+
+  // Org name + title
+  ctx.fillStyle = '#e6eaf5';
+  ctx.font = 'bold 20px Arial, sans-serif';
+  ctx.fillText((s.orgName || 'CultureHub') + ' — Leaderboard', 24, 38);
+  ctx.fillStyle = '#7e8aab';
+  ctx.font = '12px Arial, sans-serif';
+  ctx.fillText('Generated ' + new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }), 24, 58);
+
+  // Stats row
+  const stats = [
+    { n: lb.length, l: 'Members' },
+    { n: lb.reduce((a, e) => a + e.events, 0), l: 'Check-Ins' },
+    { n: lb.reduce((a, e) => a + e.points, 0), l: 'Points' },
+  ];
+  stats.forEach((st, i) => {
+    const x = 24 + i * 110;
+    ctx.fillStyle = '#151924';
+    roundRect(ctx, x, 68, 100, 22, 4);
+    ctx.fillStyle = '#00c9b1';
+    ctx.font = 'bold 13px Arial';
+    ctx.fillText(st.n, x + 8, 83);
+    ctx.fillStyle = '#7e8aab';
+    ctx.font = '10px Arial';
+    ctx.fillText(st.l, x + 8 + ctx.measureText(st.n + ' ').width + 2, 83);
+  });
+
+  // Column header row
+  const colY = HEADER_H;
+  ctx.fillStyle = '#0e1118';
+  ctx.fillRect(0, colY, W, COL_H);
+  ctx.fillStyle = '#47536e';
+  ctx.font = '10px Arial';
+  [['RANK', 18], ['NAME', 72], ['TEAM', 260], ['EVENTS', 390], ['WINS', 455], ['POINTS', 520]].forEach(([lbl, x]) => {
+    ctx.fillText(lbl, x, colY + 18);
+  });
+
+  // Rows
+  const rankColors = ['#ffb830', '#9ca3af', '#cd7f32'];
+  const rankLabels = ['1ST', '2ND', '3RD'];
+  top.forEach((entry, i) => {
+    const y = HEADER_H + COL_H + i * ROW_H;
+    ctx.fillStyle = i % 2 === 0 ? '#0e1118' : '#07090f';
+    ctx.fillRect(0, y, W, ROW_H);
+    if (i < 3) {
+      ctx.fillStyle = rankColors[i];
+      ctx.fillRect(0, y, 3, ROW_H);
+    }
+    const ty = y + ROW_H / 2 + 5;
+
+    // Rank
+    ctx.fillStyle = i < 3 ? rankColors[i] : '#47536e';
+    ctx.font = i < 3 ? 'bold 12px Arial' : '12px Arial';
+    ctx.fillText(i < 3 ? rankLabels[i] : '#' + (i + 1), 18, ty);
+
+    // Name
+    ctx.fillStyle = '#e6eaf5';
+    ctx.font = 'bold 13px Arial';
+    const name = entry.person.name.length > 22 ? entry.person.name.slice(0, 21) + '…' : entry.person.name;
+    ctx.fillText(name, 72, ty);
+
+    // Team
+    ctx.fillStyle = '#7e8aab';
+    ctx.font = '12px Arial';
+    const team = (entry.person.team || '—').slice(0, 15);
+    ctx.fillText(team, 260, ty);
+
+    // Events
+    ctx.fillText(entry.events, 405, ty);
+
+    // Wins
+    ctx.fillText(entry.wins, 468, ty);
+
+    // Points
+    ctx.fillStyle = '#00c9b1';
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText(entry.points, 520, ty);
+  });
+
+  // Footer
+  const footerY = HEADER_H + COL_H + top.length * ROW_H;
+  ctx.fillStyle = '#0e1118';
+  ctx.fillRect(0, footerY, W, FOOTER_H);
+  ctx.fillStyle = '#47536e';
+  ctx.font = '11px Arial';
+  ctx.fillText('CultureHub  ·  Office Culture Event Tracker', 24, footerY + 24);
+  ctx.fillStyle = barGrad;
+  ctx.fillRect(0, H - 4, W, 4);
+
+  const link = document.createElement('a');
+  link.download = 'leaderboard-' + new Date().toISOString().slice(0, 10) + '.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  toast('Leaderboard image saved!', 'success');
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function printLeaderboard() {
+  const lb = CH.getLeaderboard();
+  const s = CH.getSettings();
+  if (!lb.length) { toast('No leaderboard data yet', 'info'); return; }
+
+  const medals = ['🥇', '🥈', '🥉'];
+  const rows = lb.map((e, i) => `
+    <tr class="${i < 3 ? 'top' + (i + 1) : ''}">
+      <td class="rank">${i < 3 ? medals[i] : '#' + (i + 1)}</td>
+      <td class="name">${e.person.name}</td>
+      <td class="team">${e.person.team || '—'}</td>
+      <td class="num">${e.events}</td>
+      <td class="num">${e.wins}</td>
+      <td class="pts">${e.points}</td>
+    </tr>`).join('');
+
+  const totalPts = lb.reduce((a, e) => a + e.points, 0);
+  const totalCheckins = lb.reduce((a, e) => a + e.events, 0);
+
+  const html = `<!DOCTYPE html><html><head>
+<meta charset="UTF-8"/>
+<title>Leaderboard — ${s.orgName || 'CultureHub'}</title>
+<style>
+  @page { size: 11in 8.5in; margin: 0.45in 0.55in; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; color: #1a1a2e; font-size: 12px; }
+  .header { display:flex; justify-content:space-between; align-items:flex-end;
+            border-bottom: 3px solid #6c63ff; padding-bottom: 10px; margin-bottom: 14px; }
+  .org { font-size: 20px; font-weight: 800; color: #6c63ff; }
+  .sub { font-size: 12px; color: #888; margin-top: 2px; }
+  .date { font-size: 11px; color: #aaa; }
+  .stats { display:flex; gap:14px; margin-bottom: 14px; }
+  .stat { background:#f5f3ff; border-radius:6px; padding:8px 18px; text-align:center; flex:1; }
+  .stat-n { font-size:20px; font-weight:800; color:#6c63ff; line-height:1.2; }
+  .stat-l { font-size:9px; color:#888; text-transform:uppercase; letter-spacing:.5px; }
+  table { width:100%; border-collapse:collapse; }
+  thead tr { background:#6c63ff; color:#fff; }
+  th { padding:7px 10px; text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.5px; }
+  th.num, th.pts { text-align:center; }
+  td { padding:6px 10px; border-bottom:1px solid #eee; }
+  .rank { width:50px; font-size:15px; }
+  .name { font-weight:700; }
+  .team { color:#555; }
+  .num { text-align:center; width:60px; color:#555; }
+  .pts { text-align:center; width:70px; font-weight:800; color:#6c63ff; }
+  tr.top1 td { background:#fffbea; }
+  tr.top2 td { background:#f9f9f9; }
+  tr.top3 td { background:#fff6f0; }
+  tr:not(.top1):not(.top2):not(.top3):hover td { background:#f9f8ff; }
+  .footer { margin-top:12px; font-size:9px; color:#bbb; text-align:center;
+            border-top:1px solid #eee; padding-top:6px; }
+</style></head><body>
+<div class="header">
+  <div>
+    <div class="org">🎯 ${s.orgName || 'CultureHub'} — Leaderboard</div>
+    <div class="sub">Culture Event Rankings · All Members</div>
+  </div>
+  <div class="date">Printed ${new Date().toLocaleString()}</div>
+</div>
+<div class="stats">
+  <div class="stat"><div class="stat-n">${lb.length}</div><div class="stat-l">Members</div></div>
+  <div class="stat"><div class="stat-n">${totalCheckins}</div><div class="stat-l">Total Check-Ins</div></div>
+  <div class="stat"><div class="stat-n">${totalPts}</div><div class="stat-l">Total Points</div></div>
+  <div class="stat"><div class="stat-n">${lb[0] ? lb[0].person.name.split(' ')[0] : '—'}</div><div class="stat-l">Top Member</div></div>
+</div>
+<table>
+  <thead><tr>
+    <th>Rank</th><th>Name</th><th>Team</th>
+    <th class="num">Events</th><th class="num">Wins</th><th class="pts">Points</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div class="footer">🎯 CultureHub — Office Culture Event Tracker · No server · All data local</div>
+</body></html>`;
+
+  printHTML(html);
+}
+
 function render() {
   const s = CH.getSettings();
   const data = CH.load();
@@ -148,6 +360,19 @@ function render() {
           <div style="display:flex;gap:8px">
             <button class="btn btn-secondary" onclick="generateReport('overview')" style="flex:1;justify-content:center">📄 Full Report PDF</button>
           </div>
+        </div>
+
+        <!-- Leaderboard Export -->
+        <div class="card">
+          <div class="card-title">🏆 Leaderboard Export</div>
+          <p style="color:var(--text2);font-size:0.875rem;margin-bottom:16px">
+            Share or print the current leaderboard standings.
+          </p>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" onclick="exportLeaderboardImage()" style="flex:1;justify-content:center">📧 Email Image</button>
+            <button class="btn btn-secondary" onclick="printLeaderboard()" style="flex:1;justify-content:center">🖨 Print 8.5×11</button>
+          </div>
+          <p style="font-size:0.78rem;color:var(--text3);margin-top:8px">Email image is 600px wide PNG · Print is landscape letter</p>
         </div>
 
         <!-- Sample Data -->
