@@ -154,14 +154,12 @@ function rankColor(i) {
 
 function showStatModal(type) {
   if (tvMode) return;
-  const lb = CH.getLeaderboard();
-  const events = CH.getEvents();
-  const people = CH.getPeople();
 
   let icon, title, bodyHtml;
 
   if (type === 'participants') {
     icon = '👥'; title = 'Participants';
+    const lb = CH.getLeaderboard();
     const rows = lb.filter(e => e.events > 0).sort((a,b) => b.points - a.points);
     bodyHtml = rows.length === 0
       ? `<div class="empty-state" style="padding:24px"><span class="empty-icon">👥</span><h3>No participants yet</h3><p>Check people in to events to see them here.</p></div>`
@@ -180,6 +178,7 @@ function showStatModal(type) {
         </div>`;
   } else if (type === 'events') {
     icon = '📅'; title = 'Events';
+    const events = CH.getEvents();
     const rows = [...events].sort((a,b) => (b.date||'') > (a.date||'') ? 1 : -1);
     bodyHtml = rows.length === 0
       ? `<div class="empty-state" style="padding:24px"><span class="empty-icon">📅</span><h3>No events yet</h3><p>Create an event to get started.</p></div>`
@@ -202,6 +201,8 @@ function showStatModal(type) {
         </div>`;
   } else if (type === 'points') {
     icon = '⭐'; title = 'Points Awarded';
+    const lb = CH.getLeaderboard();
+    const events = CH.getEvents();
     const totalPts = lb.reduce((s,e) => s + e.points, 0);
     const byEvent = events.map(ev => ({
       title: ev.title, date: ev.date,
@@ -234,6 +235,8 @@ function showStatModal(type) {
           </div>`}`;
   } else if (type === 'winners') {
     icon = '🏆'; title = 'Winners';
+    const events = CH.getEvents();
+    const people = CH.getPeople();
     const rows = [];
     events.forEach(ev => {
       ev.attendees.filter(a => a.checkedIn && a.isWinner).forEach(a => {

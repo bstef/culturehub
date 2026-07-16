@@ -78,11 +78,12 @@ async function deletePerson(id, name) {
 }
 
 function showPersonStatsModal(id) {
-  const stats = CH.getPersonStats(id);
+  const data = CH.load();
+  const stats = CH.getPersonStats(id, data);
   if (!stats) return;
   const { person, eventsAttended, totalPoints, wins } = stats;
 
-  const lb = CH.getLeaderboard();
+  const lb = CH.getLeaderboard(data);
   const rank = lb.findIndex(e => e.person.id === id) + 1;
 
   const sorted = [...eventsAttended].sort((a, b) => (b.event.date || '').localeCompare(a.event.date || ''));

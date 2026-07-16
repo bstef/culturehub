@@ -202,8 +202,10 @@ const CH = (() => {
   }
 
   // ── Stats ─────────────────────────────────────────────────────────────────────
-  function getLeaderboard() {
-    const data = load();
+  // Both accept an optional pre-loaded `data` object so callers that need
+  // more than one of these in the same action can share a single load().
+  function getLeaderboard(data) {
+    data = data || load();
     const scores = {};
     data.people.forEach(p => { scores[p.id] = { person: p, points: 0, events: 0, wins: 0 }; });
     data.events.forEach(ev => {
@@ -223,8 +225,8 @@ const CH = (() => {
     return Object.values(scores).sort((a, b) => b.points - a.points || b.events - a.events);
   }
 
-  function getPersonStats(personId) {
-    const data = load();
+  function getPersonStats(personId, data) {
+    data = data || load();
     const person = data.people.find(p => p.id === personId);
     if (!person) return null;
     const eventsAttended = [];
