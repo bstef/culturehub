@@ -384,13 +384,13 @@ function aboutCardHTML() {
       <div style="font-size:2rem;margin-bottom:8px">🎯</div>
       <div style="font-family:var(--font-display);font-size:1.2rem;font-weight:800;margin-bottom:6px">CultureHub</div>
       <div style="color:var(--text2);font-size:0.85rem">Office Culture Event Tracker · All data stored locally in your browser · No server required</div>
-      <div style="margin-top:12px;display:flex;justify-content:center;gap:16px;font-size:0.8rem;color:var(--text3)">
-        <span>📅 Events</span>
-        <span>👥 Roster</span>
-        <span>✅ Check-In</span>
-        <span>📊 Dashboard</span>
-        <span>🔍 Search</span>
-        <span>🖼 Gallery</span>
+      <div style="margin-top:12px;display:flex;justify-content:center;gap:16px;flex-wrap:wrap;font-size:0.8rem;color:var(--text3)">
+        <a href="events.html">📅 Events</a>
+        <a href="roster.html">👥 Roster</a>
+        <a href="checkin.html">✅ Check-In</a>
+        <a href="dashboard.html">📊 Dashboard</a>
+        <a href="search.html">🔍 Search</a>
+        <a href="gallery.html">🖼 Gallery</a>
       </div>
     </div>
   </div>`;
