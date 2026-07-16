@@ -254,8 +254,8 @@ function render() {
     <!-- Filters -->
     <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;align-items:center">
       <div class="search-wrap" style="flex:1;min-width:200px">
-        <input class="form-control" placeholder="Search by name, team, email…" value="${searchQ}"
-          oninput="searchQ=this.value.toLowerCase();render()"/>
+        <input class="form-control" id="roster-search" placeholder="Search by name, team, email…" value="${searchQ}"
+          oninput="searchQ=this.value.toLowerCase();withFocusPreserved(render)"/>
       </div>
       <select class="form-control" style="width:180px" onchange="filterTeam=this.value;render()">
         <option value="all">All Teams</option>

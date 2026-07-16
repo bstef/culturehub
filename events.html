@@ -108,7 +108,7 @@ function render() {
     <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;align-items:center">
       <div class="search-wrap" style="flex:1;min-width:200px">
         <input class="form-control" id="ev-search" placeholder="Search events..." value="${searchQ}"
-          oninput="searchQ=this.value.toLowerCase();render()"/>
+          oninput="searchQ=this.value.toLowerCase();withFocusPreserved(render)"/>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-sm ${filterType==='all'?'btn-primary':'btn-secondary'}" onclick="filterType='all';render()">All</button>

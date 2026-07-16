@@ -68,6 +68,25 @@ const Accent = (() => {
 
 Accent.init();
 
+// ── Focus-preserving re-render ───────────────────────────────────────────────
+// Pages rebuild #root's innerHTML wholesale on every render(), which replaces
+// the DOM node an input lives on — so typing in a live-filtered search box
+// loses focus after each keystroke. Wrap the render() call in an oninput
+// handler with this to restore focus and cursor position to the same
+// element (matched by id) afterward.
+function withFocusPreserved(renderFn) {
+  const active = document.activeElement;
+  const id = active && active.id;
+  const start = active && typeof active.selectionStart === 'number' ? active.selectionStart : null;
+  const end = active && typeof active.selectionEnd === 'number' ? active.selectionEnd : null;
+  renderFn();
+  if (!id) return;
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.focus();
+  if (start !== null) el.setSelectionRange(start, end);
+}
+
 // ── Toast ──────────────────────────────────────────────────────────────────────
 function toast(msg, type = 'info', duration = 3000) {
   let wrap = document.getElementById('ch-toast-wrap');

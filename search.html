@@ -223,9 +223,9 @@ function render() {
 
     <!-- Search bar -->
     <div class="search-wrap" style="margin-bottom:20px">
-      <input class="form-control" style="font-size:1rem;padding:14px 14px 14px 44px" 
+      <input class="form-control" id="search-input" style="font-size:1rem;padding:14px 14px 14px 44px"
         placeholder="Search people, events, teams…" value="${searchQ}"
-        oninput="searchQ=this.value.toLowerCase();render()" autofocus/>
+        oninput="searchQ=this.value.toLowerCase();withFocusPreserved(render)" autofocus/>
     </div>
 
     <!-- Mode tabs -->

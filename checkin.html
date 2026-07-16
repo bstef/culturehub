@@ -228,8 +228,8 @@ function render() {
 
             <!-- Search -->
             <div class="search-wrap" style="margin-bottom:16px">
-              <input class="form-control" placeholder="Search attendees…" value="${searchQ}"
-                oninput="searchQ=this.value.toLowerCase();render()"/>
+              <input class="form-control" id="chk-search" placeholder="Search attendees…" value="${searchQ}"
+                oninput="searchQ=this.value.toLowerCase();withFocusPreserved(render)"/>
             </div>
 
             <!-- Scoring legend -->
