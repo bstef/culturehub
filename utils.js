@@ -3,6 +3,8 @@
 // ── Theme System ───────────────────────────────────────────────────────────────
 const Theme = (() => {
   const KEY = 'culturehub_theme';
+  const ORDER = ['dark', 'dim', 'light'];
+  const LABEL = { dark: 'Dark', dim: 'Dim', light: 'Light' };
 
   function get() {
     return localStorage.getItem(KEY) || 'dark';
@@ -11,14 +13,15 @@ const Theme = (() => {
   function apply(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem(KEY, theme);
-    // Update all toggle buttons on the page
+    // Update all toggle buttons on the page — title shows what clicking will switch TO
+    const next = ORDER[(ORDER.indexOf(theme) + 1) % ORDER.length];
     document.querySelectorAll('.theme-toggle').forEach(btn => {
-      btn.setAttribute('title', theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode');
+      btn.setAttribute('title', `Switch to ${LABEL[next]} Mode`);
     });
   }
 
   function toggle() {
-    const next = get() === 'dark' ? 'light' : 'dark';
+    const next = ORDER[(ORDER.indexOf(get()) + 1) % ORDER.length];
     apply(next);
     return next;
   }
@@ -35,6 +38,35 @@ const Theme = (() => {
 
 // Init theme before anything renders
 Theme.init();
+
+// ── Accent Color System ──────────────────────────────────────────────────────
+const Accent = (() => {
+  const KEY = 'culturehub_accent';
+  const OPTIONS = ['teal', 'violet', 'blue', 'orange', 'red'];
+  // Representative swatch hex per accent, used for picker UI regardless of theme
+  const SWATCH = { teal: '#00c9b1', violet: '#8b5cf6', blue: '#3b82f6', orange: '#f97316', red: '#e0645f' };
+  // "rose" was renamed to "red" — remap anyone with the old value saved
+  const LEGACY = { rose: 'red' };
+
+  function get() {
+    const stored = localStorage.getItem(KEY) || 'teal';
+    return LEGACY[stored] || stored;
+  }
+
+  function apply(accent) {
+    document.documentElement.setAttribute('data-accent', accent);
+    localStorage.setItem(KEY, accent);
+  }
+
+  function init() {
+    apply(get());
+    document.addEventListener('DOMContentLoaded', () => apply(get()));
+  }
+
+  return { get, apply, init, OPTIONS, SWATCH };
+})();
+
+Accent.init();
 
 // ── Toast ──────────────────────────────────────────────────────────────────────
 function toast(msg, type = 'info', duration = 3000) {
@@ -317,8 +349,9 @@ function navHTML() {
     </nav>
     <div class="nav-actions">
       <button class="btn btn-sm btn-ghost" onclick="CH.exportBackup()" title="Backup data">💾 Backup</button>
-      <button class="theme-toggle" onclick="Theme.toggle()" title="Toggle light/dark mode" aria-label="Toggle theme">
+      <button class="theme-toggle" onclick="Theme.toggle()" title="Toggle theme" aria-label="Toggle theme">
         <span class="icon-sun">☀️</span>
+        <span class="icon-dim">🌗</span>
         <span class="icon-moon">🌙</span>
       </button>
     </div>
@@ -333,3 +366,12 @@ function navHTML() {
   });
   obs.observe(document.body, { childList: true, subtree: true });
 })();
+
+// ── Footer HTML ──────────────────────────────────────────────────────────────
+function footerHTML() {
+  return `
+  <footer class="ch-footer">
+    <span>© ${new Date().getFullYear()} CultureHub — Office Culture Event Tracker</span>
+    <a href="docs/index.html">📖 Documentation</a>
+  </footer>`;
+}

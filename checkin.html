@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>(function(){var t=localStorage.getItem("culturehub_theme")||"dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+<script>(function(){var t=localStorage.getItem("culturehub_theme")||"dark";var a=localStorage.getItem("culturehub_accent")||"teal";document.documentElement.setAttribute("data-theme",t);document.documentElement.setAttribute("data-accent",a);})();</script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>CultureHub — Check-In</title>
@@ -24,11 +24,13 @@
 <body>
 <div id="nav-root"></div>
 <main class="page" id="root"></main>
+<div id="footer-root"></div>
 
 <script src="data.js"></script>
 <script src="utils.js"></script>
 <script>
 document.getElementById('nav-root').innerHTML = navHTML();
+document.getElementById('footer-root').innerHTML = footerHTML();
 setActiveNav();
 
 let selectedEventId = null;
@@ -143,7 +145,7 @@ function render() {
         <div class="page-title">✅ <span>Check-In</span></div>
         <div class="page-subtitle">Manage attendance and award points</div>
       </div>
-      ${selectedEvent ? `<button class="btn btn-secondary" onclick="generateReport('event','${selectedEvent.id}')">📄 Export Report</button>` : ''}
+      ${selectedEvent ? `<button class="btn btn-secondary" onclick="generateReport('event','${selectedEvent.id}')">📑 Export Report</button>` : ''}
     </div>
 
     <div style="display:grid;grid-template-columns:280px 1fr;gap:24px;align-items:start">

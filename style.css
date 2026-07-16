@@ -1,6 +1,12 @@
 /* CultureHub — Shared Styles v2 */
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,500&display=swap');
 
+/* Each nav link is a real page load (no client-side router), so the browser
+   does a full document swap on every click. Opting into cross-document view
+   transitions smooths that swap into a fade instead of a hard flash, in
+   browsers that support it (Chrome/Edge 126+); ignored elsewhere. */
+@view-transition { navigation: auto; }
+
 /* ═══════════════════════ DARK MODE (default) ═══════════════════════
    Deep navy canvas · Teal accent · Coral · Amber gold
    ════════════════════════════════════════════════════════════════════ */
@@ -35,6 +41,39 @@ html[data-theme="dark"] {
   color-scheme: dark;
 }
 
+/* ═══════════════════════ DIM MODE ═══════════════════════════════════
+   Mid-tone slate canvas · sits between Dark and Light
+   ════════════════════════════════════════════════════════════════════ */
+html[data-theme="dim"] {
+  --bg:      #333a49;
+  --bg2:     #3c4353;
+  --bg3:     #454d5f;
+  --bg4:     #4f5871;
+  --border:  #565f74;
+  --border2: #656f87;
+  --text:    #f2f4fa;
+  --text2:   #c7cddc;
+  --text3:   #b6bdcf;
+  --accent:       #23e0c3;
+  --accent2:      #55e8d1;
+  --accent-dark:  #00a68f;
+  --accent-glow:  rgba(35,224,195,0.20);
+  --accent-glow2: rgba(35,224,195,0.09);
+  --coral:      #ff7a7a;
+  --coral-glow: rgba(255,122,122,0.16);
+  --gold:       #ffc35c;
+  --gold-dark:  #d99a1f;
+  --gold-glow:  rgba(255,195,92,0.18);
+  --green:   #3fe0ab;
+  --red:     #ff7a7a;
+  --orange:  #ff9f66;
+  --blue:    #6fabff;
+  --shadow:    0 4px 20px rgba(0,0,0,0.30);
+  --shadow-lg: 0 8px 44px rgba(0,0,0,0.45);
+  --nav-bg: rgba(51,58,73,0.90);
+  color-scheme: dark;
+}
+
 /* ═══════════════════════ LIGHT MODE ════════════════════════════════
    Soft white canvas · Deep teal · Warm coral · Amber
    ════════════════════════════════════════════════════════════════════ */
@@ -47,7 +86,7 @@ html[data-theme="light"] {
   --border2: #c2cce0;
   --text:    #0f172a;
   --text2:   #546080;
-  --text3:   #96a0ba;
+  --text3:   #6b7690;
   --accent:       #007f6f;
   --accent2:      #00a08e;
   --accent-dark:  #005e52;
@@ -66,6 +105,63 @@ html[data-theme="light"] {
   --shadow-lg: 0 8px 40px rgba(0,0,0,0.14);
   --nav-bg: rgba(255,255,255,0.92);
   color-scheme: light;
+}
+
+/* ═══════════════════════ ACCENT COLORS ═════════════════════════════
+   Optional [data-accent] override, layered on top of any theme above.
+   Default (no attribute, or "teal") uses each theme's built-in accent.
+   ════════════════════════════════════════════════════════════════════ */
+html[data-theme="dark"][data-accent="violet"] {
+  --accent: #8b5cf6; --accent2: #a78bfa; --accent-dark: #7c3aed;
+  --accent-glow: rgba(139,92,246,0.18); --accent-glow2: rgba(139,92,246,0.08);
+}
+html[data-theme="dim"][data-accent="violet"] {
+  --accent: #9d7ef8; --accent2: #b79df9; --accent-dark: #7c3aed;
+  --accent-glow: rgba(157,126,248,0.20); --accent-glow2: rgba(157,126,248,0.09);
+}
+html[data-theme="light"][data-accent="violet"] {
+  --accent: #6d28d9; --accent2: #7c3aed; --accent-dark: #5b21b6;
+  --accent-glow: rgba(109,40,217,0.13); --accent-glow2: rgba(109,40,217,0.06);
+}
+
+html[data-theme="dark"][data-accent="blue"] {
+  --accent: #3b82f6; --accent2: #60a5fa; --accent-dark: #2563eb;
+  --accent-glow: rgba(59,130,246,0.18); --accent-glow2: rgba(59,130,246,0.08);
+}
+html[data-theme="dim"][data-accent="blue"] {
+  --accent: #5c97f8; --accent2: #82b1fa; --accent-dark: #2563eb;
+  --accent-glow: rgba(92,151,248,0.20); --accent-glow2: rgba(92,151,248,0.09);
+}
+html[data-theme="light"][data-accent="blue"] {
+  --accent: #1d4ed8; --accent2: #2563eb; --accent-dark: #1e40af;
+  --accent-glow: rgba(29,78,216,0.13); --accent-glow2: rgba(29,78,216,0.06);
+}
+
+html[data-theme="dark"][data-accent="orange"] {
+  --accent: #f97316; --accent2: #fb923c; --accent-dark: #ea580c;
+  --accent-glow: rgba(249,115,22,0.18); --accent-glow2: rgba(249,115,22,0.08);
+}
+html[data-theme="dim"][data-accent="orange"] {
+  --accent: #fa8632; --accent2: #fca35c; --accent-dark: #ea580c;
+  --accent-glow: rgba(250,134,50,0.20); --accent-glow2: rgba(250,134,50,0.09);
+}
+html[data-theme="light"][data-accent="orange"] {
+  --accent: #c2410c; --accent2: #ea580c; --accent-dark: #9a3412;
+  --accent-glow: rgba(194,65,12,0.13); --accent-glow2: rgba(194,65,12,0.06);
+}
+
+/* Muted brick-red — clearly "red" without reading as a full alarm/danger red */
+html[data-theme="dark"][data-accent="red"] {
+  --accent: #e0645f; --accent2: #ea8985; --accent-dark: #c44740;
+  --accent-glow: rgba(224,100,95,0.18); --accent-glow2: rgba(224,100,95,0.08);
+}
+html[data-theme="dim"][data-accent="red"] {
+  --accent: #e4726c; --accent2: #ee9793; --accent-dark: #c44740;
+  --accent-glow: rgba(228,114,108,0.20); --accent-glow2: rgba(228,114,108,0.09);
+}
+html[data-theme="light"][data-accent="red"] {
+  --accent: #a83a35; --accent2: #c44740; --accent-dark: #8a2e2a;
+  --accent-glow: rgba(168,58,53,0.13); --accent-glow2: rgba(168,58,53,0.06);
 }
 
 /* ═══════════════════════ SHARED TOKENS ═════════════════════════════ */
@@ -157,14 +253,37 @@ body {
   transform: rotate(18deg) scale(1.08);
 }
 .theme-toggle .icon-sun,
+.theme-toggle .icon-dim,
 .theme-toggle .icon-moon {
   position: absolute;
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
-html[data-theme="dark"]  .icon-sun  { transform: translateY(0);   opacity: 1; }
-html[data-theme="dark"]  .icon-moon { transform: translateY(30px); opacity: 0; }
+/* Icon shown = the theme you'll switch TO on click (dark → dim → light → dark) */
+html[data-theme="dark"]  .icon-sun  { transform: translateY(30px);  opacity: 0; }
+html[data-theme="dark"]  .icon-dim  { transform: translateY(0);     opacity: 1; }
+html[data-theme="dark"]  .icon-moon { transform: translateY(30px);  opacity: 0; }
+
+html[data-theme="dim"]   .icon-sun  { transform: translateY(0);     opacity: 1; }
+html[data-theme="dim"]   .icon-dim  { transform: translateY(-30px); opacity: 0; }
+html[data-theme="dim"]   .icon-moon { transform: translateY(30px);  opacity: 0; }
+
 html[data-theme="light"] .icon-sun  { transform: translateY(-30px); opacity: 0; }
+html[data-theme="light"] .icon-dim  { transform: translateY(30px);  opacity: 0; }
 html[data-theme="light"] .icon-moon { transform: translateY(0);     opacity: 1; }
+
+/* ── Footer ───────────────────────────────────────────────────────── */
+.ch-footer {
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  flex-wrap: wrap;
+  padding: 20px 36px 28px;
+  max-width: 1400px; margin: 0 auto;
+  font-size: 0.8rem; color: var(--text3);
+  border-top: 1px solid var(--border);
+}
+.ch-footer a {
+  color: var(--text3); text-decoration: none; transition: color 0.15s ease;
+}
+.ch-footer a:hover { color: var(--accent); }
 
 /* ── Page ─────────────────────────────────────────────────────────── */
 .page {
@@ -323,6 +442,9 @@ tbody td { padding: 14px 18px; font-size: 0.9rem; vertical-align: middle; line-h
 .stat-value { font-family: var(--font-display); font-size: 2.25rem; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; }
 .stat-label { font-size: 0.72rem; color: var(--text2); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 2px; }
 .stat-icon  { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); font-size: 2.5rem; opacity: 0.07; }
+.stat-card-clickable { cursor: pointer; }
+.stat-card-clickable:hover { border-color: var(--border2); background: var(--bg3); transform: translateY(-2px); box-shadow: var(--shadow); }
+.stat-card-clickable:active { transform: translateY(0); }
 
 /* ── Progress Bar ─────────────────────────────────────────────────── */
 .progress-bar { height: 5px; background: var(--border); border-radius: 99px; overflow: hidden; flex: 1; }

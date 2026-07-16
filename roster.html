@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>(function(){var t=localStorage.getItem("culturehub_theme")||"dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+<script>(function(){var t=localStorage.getItem("culturehub_theme")||"dark";var a=localStorage.getItem("culturehub_accent")||"teal";document.documentElement.setAttribute("data-theme",t);document.documentElement.setAttribute("data-accent",a);})();</script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>CultureHub — Roster</title>
@@ -10,11 +10,13 @@
 <body>
 <div id="nav-root"></div>
 <main class="page" id="root"></main>
+<div id="footer-root"></div>
 
 <script src="data.js"></script>
 <script src="utils.js"></script>
 <script>
 document.getElementById('nav-root').innerHTML = navHTML();
+document.getElementById('footer-root').innerHTML = footerHTML();
 setActiveNav();
 
 let searchQ = '', filterTeam = 'all';
@@ -71,6 +73,78 @@ async function deletePerson(id, name) {
   CH.deletePerson(id);
   toast('Person removed', 'info');
   render();
+}
+
+function showPersonStatsModal(id) {
+  const stats = CH.getPersonStats(id);
+  if (!stats) return;
+  const { person, eventsAttended, totalPoints, wins } = stats;
+
+  const lb = CH.getLeaderboard();
+  const rank = lb.findIndex(e => e.person.id === id) + 1;
+
+  const sorted = [...eventsAttended].sort((a, b) => (b.event.date || '').localeCompare(a.event.date || ''));
+
+  openModal(`
+    <div class="modal-header">
+      <span class="modal-title">📊 Participation Stats</span>
+      <button class="modal-close" onclick="closeModal(this)">✕</button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+      ${avatarEl(person.name)}
+      <div>
+        <div style="font-weight:700;font-size:1.1rem">${person.name}</div>
+        <div style="font-size:0.8rem;color:var(--text2)">${person.team ? `<span class="badge badge-gray">${person.team}</span>` : 'No team'} ${person.email ? ` · ${person.email}` : ''}</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 8px;text-align:center">
+        <div style="font-size:1.5rem;font-weight:800;color:var(--accent)">${totalPoints}</div>
+        <div style="font-size:0.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Points</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 8px;text-align:center">
+        <div style="font-size:1.5rem;font-weight:800">${eventsAttended.length}</div>
+        <div style="font-size:0.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Events</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 8px;text-align:center">
+        <div style="font-size:1.5rem;font-weight:800;color:var(--gold)">${wins}</div>
+        <div style="font-size:0.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Wins</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 8px;text-align:center">
+        <div style="font-size:1.5rem;font-weight:800">${rank > 0 ? '#' + rank : '—'}</div>
+        <div style="font-size:0.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Rank</div>
+      </div>
+    </div>
+
+    <div style="font-size:0.75rem;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Event History</div>
+    ${sorted.length === 0 ? `
+      <div class="empty-state" style="padding:24px">
+        <span class="empty-icon">🏁</span>
+        <h3>No events yet</h3>
+        <p>${person.name.split(' ')[0]} hasn't checked into any events.</p>
+      </div>` : `
+      <div class="table-wrap" style="max-height:320px;overflow-y:auto">
+        <table>
+          <thead><tr><th>Event</th><th>Date</th><th>Type</th><th>Result</th></tr></thead>
+          <tbody>
+            ${sorted.map(ea => `
+              <tr>
+                <td style="font-weight:600">${ea.event.title}</td>
+                <td>${fmtDate(ea.event.date)}</td>
+                <td>${eventTypeBadge(ea.event.type)}</td>
+                <td>${pointsBadge(ea.attendance.points, ea.attendance.isWinner)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`}
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="generateReport('person','${id}')">📑 Full Report PDF</button>
+      <button class="btn btn-primary" onclick="closeModal(this)">Close</button>
+    </div>
+  `, { lg: true });
 }
 
 function showImportModal() {
@@ -214,7 +288,7 @@ function render() {
           ${people.map(p => {
             const stats = lb.find(e => e.person.id === p.id);
             return `
-            <tr>
+            <tr style="cursor:pointer" onclick="showPersonStatsModal('${p.id}')" title="View stats for ${p.name.replace(/"/g,'&quot;')}">
               <td>
                 <div style="display:flex;align-items:center;gap:10px">
                   ${avatarEl(p.name)}
@@ -227,8 +301,8 @@ function render() {
               <td>${stats ? stats.events : 0}</td>
               <td>${stats && stats.wins > 0 ? `<span style="color:var(--gold)">🏆 ${stats.wins}</span>` : '—'}</td>
               <td>
-                <div style="display:flex;gap:6px;justify-content:flex-end">
-                  <button class="btn btn-sm btn-ghost" onclick="generateReport('person','${p.id}')" title="Report">📄</button>
+                <div style="display:flex;gap:6px;justify-content:flex-end" onclick="event.stopPropagation()">
+                  <button class="btn btn-sm btn-ghost" onclick="generateReport('person','${p.id}')" title="Report">📑</button>
                   <button class="btn btn-sm btn-ghost" onclick="showPersonModal('${p.id}')">✏️</button>
                   <button class="btn btn-sm btn-danger" onclick="deletePerson('${p.id}','${p.name.replace(/'/g,"\\'")}')">🗑</button>
                 </div>

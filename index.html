@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>(function(){var t=localStorage.getItem("culturehub_theme")||"dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+<script>(function(){var t=localStorage.getItem("culturehub_theme")||"dark";var a=localStorage.getItem("culturehub_accent")||"teal";document.documentElement.setAttribute("data-theme",t);document.documentElement.setAttribute("data-accent",a);})();</script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>CultureHub — Home</title>
@@ -11,11 +11,13 @@
 <div id="nav-root"></div>
 
 <main class="page" id="root"></main>
+<div id="footer-root"></div>
 
 <script src="data.js"></script>
 <script src="utils.js"></script>
 <script>
 document.getElementById('nav-root').innerHTML = navHTML();
+document.getElementById('footer-root').innerHTML = footerHTML();
 setActiveNav();
 
 function render() {
@@ -124,7 +126,7 @@ function render() {
             <a href="roster.html" class="btn btn-secondary" style="justify-content:center">👥 Manage Roster</a>
             <a href="checkin.html" class="btn btn-secondary" style="justify-content:center">✅ Check-In</a>
             <a href="gallery.html" class="btn btn-secondary" style="justify-content:center">🖼 Gallery</a>
-            <button class="btn btn-secondary" onclick="generateReport('overview')" style="width:100%;justify-content:center">📄 Export Report</button>
+            <button class="btn btn-secondary" onclick="generateReport('overview')" style="width:100%;justify-content:center">📑 Export Report</button>
           </div>
         </div>
       </div>

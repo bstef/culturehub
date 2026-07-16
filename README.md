@@ -16,6 +16,7 @@ CultureHub is a zero-server team culture event tracker built with vanilla HTML, 
 - Supports native format and Microsoft Teams/Azure AD exports
 - Automatic duplicate detection
 - Tracks name, team affiliation, and email
+- Click any person for a stats popup — points, events attended, wins, leaderboard rank, and full event history
 
 ### ✅ Check-In & Scoring
 - Tap to check in (1 point) or mark winner (3 points)
@@ -29,6 +30,7 @@ CultureHub is a zero-server team culture event tracker built with vanilla HTML, 
 - Scrolling ticker of top scores and recent events
 - Event attendance progress bars
 - Auto-refresh every 30 seconds
+- Clickable stat cards (Participants, Events, Points, Winners) open a detail breakdown — disabled automatically in TV Mode to keep the lobby display clean
 
 ### 🖼️ Photo Gallery
 - Per-event photo management with drag-drop support
@@ -41,9 +43,11 @@ CultureHub is a zero-server team culture event tracker built with vanilla HTML, 
 
 ### ⚙️ Settings & Data Management
 - Customize organization name
-- Dark/light theme toggle (persisted)
+- **Dark, Dim, and Light** themes, plus **5 accent colors** (Teal, Violet, Blue, Orange, Red) — mix and match, both persisted independently
+- Tiered sample data for demos: Small, Standard, Large, and XLarge (up to 60 people / 16 events), clearly labeled as fictitious and randomly generated
 - Backup and restore data
 - Export/import functionality
+- Persistent footer on every page with copyright and a link to the full documentation
 
 ## 🚀 Getting Started
 
@@ -84,7 +88,7 @@ CultureHub is a zero-server team culture event tracker built with vanilla HTML, 
 ├── settings.html       # Configuration, backup, restore
 ├── data.js             # Shared data layer (localStorage)
 ├── utils.js            # Helper functions and navigation
-├── style.css           # Styling (dark/light theme support)
+├── style.css           # Styling (Dark/Dim/Light themes + 5 accent colors)
 ├── docs/               # Documentation
 │   ├── hashnode-post.md
 │   └── index.html
@@ -124,7 +128,9 @@ All data is stored locally in your browser's `localStorage` under the key `cultu
 
 ## 🎨 Theme Support
 
-CultureHub includes built-in dark and light themes, toggled from Settings. Theme preference is persisted to localStorage.
+CultureHub includes three themes — **Dark**, **Dim**, and **Light** — cycled from the nav bar's toggle button or picked directly in **Settings → Appearance**. Dim sits deliberately between the other two: a mid-tone slate canvas for a softer alternative to full dark or full light.
+
+Independently of theme, pick an **accent color** — Teal (default), Violet, Blue, Orange, or Red — from the same Appearance card. Red is intentionally a muted brick tone rather than a pure alarm red, so it doesn't read as a danger color. Theme and accent combine freely (15 total looks) and both preferences persist to `localStorage` (`culturehub_theme`, `culturehub_accent`), applied before first paint to avoid a flash of the wrong colors on load.
 
 ## 📊 Scoring System
 
@@ -137,7 +143,7 @@ CultureHub includes built-in dark and light themes, toggled from Settings. Theme
 ## 🛠️ Built With
 
 - **HTML5** — Semantic markup
-- **CSS3** — Grid, flexbox, CSS variables for theming
+- **CSS3** — Grid, flexbox, CSS variables for theming, [View Transitions](https://developer.mozilla.org/en-US/docs/Web/API/View_Transition_API) opt-in for smoother page-to-page navigation in supporting browsers
 - **Vanilla JavaScript** — No frameworks or dependencies
 - **localStorage** — Client-side data persistence
 

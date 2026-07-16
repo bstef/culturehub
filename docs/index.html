@@ -634,11 +634,12 @@ pre .n { color: var(--text); }
       <div class="feat-desc">
         Manually add people with name, team, and email, or bulk-import from a JSON file.
         Supports native format and Microsoft Teams / Azure AD export (displayName, mail, department).
+        Click anyone to pop open their stats — points, events, wins, rank, and full event history.
       </div>
       <div class="feat-tags">
         <span class="tag">JSON import</span>
         <span class="tag">Teams/Azure AD</span>
-        <span class="tag">Team filter</span>
+        <span class="tag">Per-person stats popup</span>
       </div>
     </div>
 
@@ -661,12 +662,13 @@ pre .n { color: var(--text); }
       <div class="feat-title">TV Dashboard &amp; Leaderboard</div>
       <div class="feat-desc">
         A live leaderboard with animated ranks, a scrolling ticker, and event attendance bars.
-        One click enters full-screen TV Mode for lobby displays — auto-refreshes every 30 seconds.
+        The four stat cards (Participants, Events, Points, Winners) open a detail breakdown on click.
+        One click enters full-screen TV Mode for lobby displays — stat popups disable automatically and it auto-refreshes every 30 seconds.
       </div>
       <div class="feat-tags">
         <span class="tag">TV Mode</span>
         <span class="tag">Auto-refresh</span>
-        <span class="tag">Ticker</span>
+        <span class="tag">Clickable stat cards</span>
       </div>
     </div>
 
@@ -716,8 +718,8 @@ pre .n { color: var(--text); }
       <div class="step-title">Configure your org</div>
       <div class="step-desc">
         Open <strong>Settings</strong> and set your organization name.
-        Load the built-in sample data to explore all features instantly,
-        or import your real team from a JSON file.
+        Load built-in sample data — Small, Standard, Large, or XLarge — to explore all features instantly
+        (names are fictitious and randomly generated), or import your real team from a JSON file.
       </div>
     </div>
     <div class="step">
@@ -811,7 +813,7 @@ pre .n { color: var(--text); }
 
   <span class="k">"settings"</span>: {
     <span class="k">"orgName"</span>: <span class="s">"Our Organization"</span>,
-    <span class="k">"theme"</span>:   <span class="s">"dark"</span>            <span class="c">// "dark" | "light"</span>
+    <span class="k">"theme"</span>:   <span class="s">"dark"</span>            <span class="c">// legacy default; live theme ("dark"|"dim"|"light") + accent color are separate localStorage keys</span>
   },
 
   <span class="k">"people"</span>: [
@@ -899,21 +901,21 @@ CH.getPersonStats()  CH.importBackup()</pre>
       </div>
       <p style="font-size:0.875rem;color:var(--text2);margin-bottom:14px;line-height:1.7">
         Shared utilities loaded on every page after <code>data.js</code>.
-        Provides the nav template, theme system, toast notifications,
+        Provides the nav template, theme + accent system, toast notifications,
         modal helpers, avatar generation, date formatting, and PDF report builders.
       </p>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
-        <span class="tag">Theme (dark/light)</span>
+        <span class="tag">Theme (dark/dim/light)</span>
+        <span class="tag">Accent (teal/violet/blue/orange/red)</span>
         <span class="tag">Toasts</span>
         <span class="tag">Modals</span>
         <span class="tag">PDF reports</span>
-        <span class="tag">navHTML()</span>
       </div>
-      <pre style="margin-top:14px;font-size:0.78rem">Theme.toggle()         toast(msg, type)
-openModal(html)        confirmDialog(msg)
-avatarEl(name, size)   fmtDate(dateStr)
-eventTypeBadge(type)   generateReport(…)
-navHTML()              setActiveNav()</pre>
+      <pre style="margin-top:14px;font-size:0.78rem">Theme.toggle()         Accent.apply(name)
+openModal(html)        toast(msg, type)
+avatarEl(name, size)   confirmDialog(msg)
+eventTypeBadge(type)   fmtDate(dateStr)
+navHTML()              generateReport(…)</pre>
     </div>
 
     <div class="arch-card">
@@ -923,13 +925,15 @@ navHTML()              setActiveNav()</pre>
       </div>
       <p style="font-size:0.875rem;color:var(--text2);margin-bottom:14px;line-height:1.7">
         A single CSS file with a complete token-based design system.
-        Dark and light themes are declared as CSS custom properties on
-        <code>html[data-theme]</code>. Components are utility-first with
+        Dark, Dim, and Light themes are declared as CSS custom properties on
+        <code>html[data-theme]</code>, with Violet, Blue, Orange, and Red accent overrides layered on top via
+        <code>html[data-theme][data-accent]</code>. Components are utility-first with
         semantic class names.
       </p>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         <span class="tag">CSS variables</span>
-        <span class="tag">Dark + Light</span>
+        <span class="tag">Dark + Dim + Light</span>
+        <span class="tag">5 accent colors</span>
         <span class="tag">Responsive</span>
         <span class="tag">Outfit + Jakarta Sans</span>
       </div>
@@ -969,9 +973,9 @@ render();</pre>
 
   <div class="info-box" style="margin-top:24px">
     <strong>FOUC prevention:</strong> Each page has an inline <code>&lt;script&gt;</code> in
-    <code>&lt;head&gt;</code> that reads the theme from localStorage and sets
-    <code>data-theme</code> on <code>&lt;html&gt;</code> before the stylesheet is parsed —
-    eliminating the flash of unstyled (light) content on load.
+    <code>&lt;head&gt;</code> that reads the theme and accent from localStorage and sets
+    <code>data-theme</code> / <code>data-accent</code> on <code>&lt;html&gt;</code> before the stylesheet is parsed —
+    eliminating the flash of default (wrong) colors on load.
   </div>
 </section>
 
@@ -987,14 +991,14 @@ render();</pre>
 ├── <span class="p">events.html</span>     <span class="c">Create / edit events, filter by type</span>
 ├── <span class="p">roster.html</span>     <span class="c">Add / import people, view per-person stats</span>
 ├── <span class="p">checkin.html</span>    <span class="c">Day-of attendance with check-in and winner flags</span>
-├── <span class="p">dashboard.html</span>  <span class="c">Live leaderboard, TV mode, activity feed, ticker</span>
+├── <span class="p">dashboard.html</span>  <span class="c">Live leaderboard, TV mode, clickable stat breakdowns, ticker</span>
 ├── <span class="p">search.html</span>     <span class="c">Global search across people &amp; events with detail panel</span>
 ├── <span class="p">gallery.html</span>    <span class="c">Per-event photo grids with drag-drop upload and slideshow</span>
-├── <span class="p">settings.html</span>   <span class="c">Org name, backup/restore, import, danger zone</span>
+├── <span class="p">settings.html</span>   <span class="c">Org name, appearance (theme/accent), backup/restore, import, danger zone</span>
 │
 ├── <span class="k">data.js</span>         <span class="c">CH singleton — all CRUD, leaderboard, import/export</span>
-├── <span class="k">utils.js</span>        <span class="c">Theme, toasts, modals, avatars, date helpers, PDF reports</span>
-├── <span class="k">style.css</span>       <span class="c">Complete design system — dark + light, 380 lines</span>
+├── <span class="k">utils.js</span>        <span class="c">Theme + Accent system, toasts, modals, avatars, date helpers, PDF reports</span>
+├── <span class="k">style.css</span>       <span class="c">Complete design system — Dark/Dim/Light themes × 5 accent colors</span>
 │
 └── <span class="p">docs/</span>
     └── <span class="k">index.html</span>  <span class="c">← you are here</span></pre>

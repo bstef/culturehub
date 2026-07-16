@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>(function(){var t=localStorage.getItem("culturehub_theme")||"dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+<script>(function(){var t=localStorage.getItem("culturehub_theme")||"dark";var a=localStorage.getItem("culturehub_accent")||"teal";document.documentElement.setAttribute("data-theme",t);document.documentElement.setAttribute("data-accent",a);})();</script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>CultureHub — Events</title>
@@ -10,11 +10,13 @@
 <body>
 <div id="nav-root"></div>
 <main class="page" id="root"></main>
+<div id="footer-root"></div>
 
 <script src="data.js"></script>
 <script src="utils.js"></script>
 <script>
 document.getElementById('nav-root').innerHTML = navHTML();
+document.getElementById('footer-root').innerHTML = footerHTML();
 setActiveNav();
 
 const EVENT_TYPES = ['General','Game','Social','Team Building','Holiday','Charity'];
@@ -171,7 +173,7 @@ function render() {
           <div style="display:flex;gap:8px">
             <a href="checkin.html?event=${ev.id}" class="btn btn-primary btn-sm" style="flex:1;justify-content:center">✅ Check-In</a>
             <a href="gallery.html?event=${ev.id}" class="btn btn-secondary btn-sm" style="flex:1;justify-content:center">🖼 Gallery</a>
-            <button class="btn btn-secondary btn-sm btn-icon" onclick="generateReport('event','${ev.id}')" title="Export PDF">📄</button>
+            <button class="btn btn-secondary btn-sm btn-icon" onclick="generateReport('event','${ev.id}')" title="Export PDF">📑</button>
           </div>
         </div>`;
       }).join('')}

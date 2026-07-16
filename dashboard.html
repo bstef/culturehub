@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>(function(){var t=localStorage.getItem("culturehub_theme")||"dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+<script>(function(){var t=localStorage.getItem("culturehub_theme")||"dark";var a=localStorage.getItem("culturehub_accent")||"teal";document.documentElement.setAttribute("data-theme",t);document.documentElement.setAttribute("data-accent",a);})();</script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>CultureHub — Dashboard</title>
@@ -14,6 +14,7 @@
   body.tv-mode .ch-nav { display: none; }
   body.tv-mode .page { padding: 24px 32px; max-width: none; }
   body.tv-mode .tv-controls { display: none; }
+  body.tv-mode .ch-footer { display: none; }
 
   /* Leaderboard items */
   .lb-row {
@@ -103,11 +104,13 @@
 <div id="nav-root"></div>
 <button class="tv-exit-btn" id="tv-exit" onclick="exitTV()">✕ Exit TV Mode</button>
 <main class="page" id="root"></main>
+<div id="footer-root"></div>
 
 <script src="data.js"></script>
 <script src="utils.js"></script>
 <script>
 document.getElementById('nav-root').innerHTML = navHTML();
+document.getElementById('footer-root').innerHTML = footerHTML();
 setActiveNav();
 
 let tvMode = false;
@@ -115,6 +118,7 @@ let autoRefresh = null;
 
 function enterTV() {
   tvMode = true;
+  closeAllModals();
   document.body.classList.add('tv-mode');
   if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
   autoRefresh = setInterval(render, 30000);
@@ -143,6 +147,125 @@ function rankColor(i) {
   if (i === 1) return '#c0c0c0';
   if (i === 2) return '#cd7f32';
   return 'var(--accent)';
+}
+
+function showStatModal(type) {
+  if (tvMode) return;
+  const lb = CH.getLeaderboard();
+  const events = CH.getEvents();
+  const people = CH.getPeople();
+
+  let icon, title, bodyHtml;
+
+  if (type === 'participants') {
+    icon = '👥'; title = 'Participants';
+    const rows = lb.filter(e => e.events > 0).sort((a,b) => b.points - a.points);
+    bodyHtml = rows.length === 0
+      ? `<div class="empty-state" style="padding:24px"><span class="empty-icon">👥</span><h3>No participants yet</h3><p>Check people in to events to see them here.</p></div>`
+      : `<div class="table-wrap" style="max-height:400px;overflow-y:auto">
+          <table>
+            <thead><tr><th>Name</th><th>Team</th><th style="text-align:right">Events</th><th style="text-align:right">Points</th><th style="text-align:right">Wins</th></tr></thead>
+            <tbody>${rows.map(e => `
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:10px">${avatarEl(e.person.name,'avatar-sm')}<span style="font-weight:600">${e.person.name}</span></div></td>
+                <td>${e.person.team ? `<span class="badge badge-gray">${e.person.team}</span>` : '<span style="color:var(--text3)">—</span>'}</td>
+                <td style="text-align:right">${e.events}</td>
+                <td style="text-align:right;font-weight:700;color:var(--accent)">${e.points}</td>
+                <td style="text-align:right">${e.wins > 0 ? `<span style="color:var(--gold)">🏆 ${e.wins}</span>` : '—'}</td>
+              </tr>`).join('')}</tbody>
+          </table>
+        </div>`;
+  } else if (type === 'events') {
+    icon = '📅'; title = 'Events';
+    const rows = [...events].sort((a,b) => (b.date||'') > (a.date||'') ? 1 : -1);
+    bodyHtml = rows.length === 0
+      ? `<div class="empty-state" style="padding:24px"><span class="empty-icon">📅</span><h3>No events yet</h3><p>Create an event to get started.</p></div>`
+      : `<div class="table-wrap" style="max-height:400px;overflow-y:auto">
+          <table>
+            <thead><tr><th>Event</th><th>Date</th><th>Type</th><th style="text-align:right">Attendees</th><th style="text-align:right">Points Given</th></tr></thead>
+            <tbody>${rows.map(ev => {
+              const attended = ev.attendees.filter(a => a.checkedIn);
+              const pts = attended.reduce((s,a) => s + a.points, 0);
+              return `
+              <tr>
+                <td style="font-weight:600">${ev.title}</td>
+                <td>${fmtDate(ev.date)}</td>
+                <td>${eventTypeBadge(ev.type)}</td>
+                <td style="text-align:right">${attended.length}</td>
+                <td style="text-align:right;font-weight:700;color:var(--accent)">${pts}</td>
+              </tr>`;
+            }).join('')}</tbody>
+          </table>
+        </div>`;
+  } else if (type === 'points') {
+    icon = '⭐'; title = 'Points Awarded';
+    const totalPts = lb.reduce((s,e) => s + e.points, 0);
+    const byEvent = events.map(ev => ({
+      title: ev.title, date: ev.date,
+      pts: ev.attendees.filter(a => a.checkedIn).reduce((s,a) => s + a.points, 0)
+    })).filter(e => e.pts > 0).sort((a,b) => b.pts - a.pts);
+    bodyHtml = `
+      <div style="display:flex;gap:12px;margin-bottom:20px">
+        <div style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center">
+          <div style="font-size:1.8rem;font-weight:800;color:var(--accent)">${totalPts}</div>
+          <div style="font-size:0.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Total Points</div>
+        </div>
+        <div style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center">
+          <div style="font-size:1.8rem;font-weight:800">${byEvent.length}</div>
+          <div style="font-size:0.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Events With Points</div>
+        </div>
+      </div>
+      <div style="font-size:0.75rem;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Points By Event</div>
+      ${byEvent.length === 0
+        ? `<p style="color:var(--text2);font-size:0.85rem">No points awarded yet.</p>`
+        : `<div class="table-wrap" style="max-height:340px;overflow-y:auto">
+            <table>
+              <thead><tr><th>Event</th><th>Date</th><th style="text-align:right">Points</th></tr></thead>
+              <tbody>${byEvent.map(e => `
+                <tr>
+                  <td style="font-weight:600">${e.title}</td>
+                  <td>${fmtDate(e.date)}</td>
+                  <td style="text-align:right;font-weight:700;color:var(--accent)">${e.pts}</td>
+                </tr>`).join('')}</tbody>
+            </table>
+          </div>`}`;
+  } else if (type === 'winners') {
+    icon = '🏆'; title = 'Winners';
+    const rows = [];
+    events.forEach(ev => {
+      ev.attendees.filter(a => a.checkedIn && a.isWinner).forEach(a => {
+        const p = people.find(x => x.id === a.personId);
+        if (p) rows.push({ name: p.name, team: p.team, event: ev.title, date: ev.date, points: a.points });
+      });
+    });
+    rows.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+    bodyHtml = rows.length === 0
+      ? `<div class="empty-state" style="padding:24px"><span class="empty-icon">🏆</span><h3>No winners yet</h3><p>Mark someone as a winner during check-in.</p></div>`
+      : `<div class="table-wrap" style="max-height:400px;overflow-y:auto">
+          <table>
+            <thead><tr><th>Name</th><th>Team</th><th>Event</th><th>Date</th><th style="text-align:right">Points</th></tr></thead>
+            <tbody>${rows.map(r => `
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:10px">${avatarEl(r.name,'avatar-sm')}<span style="font-weight:600">${r.name}</span></div></td>
+                <td>${r.team ? `<span class="badge badge-gray">${r.team}</span>` : '<span style="color:var(--text3)">—</span>'}</td>
+                <td>${r.event}</td>
+                <td>${fmtDate(r.date)}</td>
+                <td style="text-align:right"><span style="color:var(--gold);font-weight:700">🏆 ${r.points}</span></td>
+              </tr>`).join('')}</tbody>
+          </table>
+        </div>`;
+  } else return;
+
+  openModal(`
+    <div class="modal-header">
+      <span class="modal-title">${icon} ${title}</span>
+      <button class="modal-close" onclick="closeModal(this)">✕</button>
+    </div>
+    ${bodyHtml}
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal(this)">Close</button>
+    </div>
+  `, { lg: true });
 }
 
 function render() {
@@ -176,32 +299,33 @@ function render() {
           <span style="font-size:0.85rem;color:var(--text2)">Live · Updated ${new Date().toLocaleTimeString()}</span>
         </div>
       </div>
+      ${!tvMode ? `
       <div style="display:flex;gap:10px;flex-wrap:wrap" class="tv-controls">
         <button class="btn btn-primary" onclick="enterTV()" id="tv-btn">
           📺 TV Mode
         </button>
-        <button class="btn btn-secondary" onclick="generateReport('overview')">📄 Export PDF</button>
-      </div>
+        <button class="btn btn-secondary" onclick="generateReport('overview')">📑 Export PDF</button>
+      </div>` : ''}
     </div>
 
     <!-- Stats bar -->
     <div class="grid-4" style="margin-bottom:24px">
-      <div class="stat-card accent">
+      <div class="stat-card accent${!tvMode?' stat-card-clickable':''}" ${!tvMode?`onclick="showStatModal('participants')" title="View participant details"`:''}>
         <div class="stat-label">Participants</div>
         <div class="stat-value">${lb.filter(e=>e.events>0).length}</div>
         <div class="stat-icon">👥</div>
       </div>
-      <div class="stat-card gold">
+      <div class="stat-card gold${!tvMode?' stat-card-clickable':''}" ${!tvMode?`onclick="showStatModal('events')" title="View event details"`:''}>
         <div class="stat-label">Events</div>
         <div class="stat-value">${events.length}</div>
         <div class="stat-icon">📅</div>
       </div>
-      <div class="stat-card green">
+      <div class="stat-card green${!tvMode?' stat-card-clickable':''}" ${!tvMode?`onclick="showStatModal('points')" title="View points breakdown"`:''}>
         <div class="stat-label">Points Awarded</div>
         <div class="stat-value">${totalPts}</div>
         <div class="stat-icon">⭐</div>
       </div>
-      <div class="stat-card red">
+      <div class="stat-card red${!tvMode?' stat-card-clickable':''}" ${!tvMode?`onclick="showStatModal('winners')" title="View winner details"`:''}>
         <div class="stat-label">Winners</div>
         <div class="stat-value">${lb.reduce((s,e)=>s+e.wins,0)}</div>
         <div class="stat-icon">🏆</div>
