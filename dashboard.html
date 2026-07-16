@@ -15,6 +15,7 @@
   body.tv-mode .page { padding: 24px 32px; max-width: none; }
   body.tv-mode .tv-controls { display: none; }
   body.tv-mode .ch-footer { display: none; }
+  body.tv-mode .ch-about-wrap { display: none; }
 
   /* Leaderboard items */
   .lb-row {
@@ -104,12 +105,14 @@
 <div id="nav-root"></div>
 <button class="tv-exit-btn" id="tv-exit" onclick="exitTV()">✕ Exit TV Mode</button>
 <main class="page" id="root"></main>
+<div id="about-root"></div>
 <div id="footer-root"></div>
 
 <script src="data.js"></script>
 <script src="utils.js"></script>
 <script>
 document.getElementById('nav-root').innerHTML = navHTML();
+document.getElementById('about-root').innerHTML = aboutCardHTML();
 document.getElementById('footer-root').innerHTML = footerHTML();
 setActiveNav();
 

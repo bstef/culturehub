@@ -10,12 +10,14 @@
 <body>
 <div id="nav-root"></div>
 <main class="page" id="root"></main>
+<div id="about-root"></div>
 <div id="footer-root"></div>
 
 <script src="data.js"></script>
 <script src="utils.js"></script>
 <script>
 document.getElementById('nav-root').innerHTML = navHTML();
+document.getElementById('about-root').innerHTML = aboutCardHTML();
 document.getElementById('footer-root').innerHTML = footerHTML();
 setActiveNav();
 

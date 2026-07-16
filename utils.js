@@ -375,3 +375,23 @@ function footerHTML() {
     <a href="docs/index.html">📖 Documentation</a>
   </footer>`;
 }
+
+// ── About Card ────────────────────────────────────────────────────────────────
+function aboutCardHTML() {
+  return `
+  <div class="ch-about-wrap">
+    <div class="card" style="margin-top:24px;text-align:center;padding:32px">
+      <div style="font-size:2rem;margin-bottom:8px">🎯</div>
+      <div style="font-family:var(--font-display);font-size:1.2rem;font-weight:800;margin-bottom:6px">CultureHub</div>
+      <div style="color:var(--text2);font-size:0.85rem">Office Culture Event Tracker · All data stored locally in your browser · No server required</div>
+      <div style="margin-top:12px;display:flex;justify-content:center;gap:16px;font-size:0.8rem;color:var(--text3)">
+        <span>📅 Events</span>
+        <span>👥 Roster</span>
+        <span>✅ Check-In</span>
+        <span>📊 Dashboard</span>
+        <span>🔍 Search</span>
+        <span>🖼 Gallery</span>
+      </div>
+    </div>
+  </div>`;
+}

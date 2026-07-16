@@ -285,6 +285,8 @@ html[data-theme="light"] .icon-moon { transform: translateY(0);     opacity: 1; 
 }
 .ch-footer a:hover { color: var(--accent); }
 
+.ch-about-wrap { max-width: 1400px; margin: 0 auto; padding: 0 36px; }
+
 /* ── Page ─────────────────────────────────────────────────────────── */
 .page {
   padding: calc(var(--nav-h) + 40px) 36px 56px;
