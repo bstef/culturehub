@@ -324,6 +324,7 @@ async function addSampleData(size = 'small') {
 }
 
 let lbExportSize = 10;
+let lbImageTheme = 'dark';
 
 function setLbSize(n) {
   lbExportSize = n;
@@ -336,11 +337,38 @@ function setLbSize(n) {
   });
 }
 
+function setLbImageTheme(t) {
+  lbImageTheme = t;
+  ['dark','light'].forEach(x => {
+    const btn = document.getElementById('lb-theme-' + x);
+    if (!btn) return;
+    btn.className = 'btn btn-sm ' + (x === t ? 'btn-primary' : 'btn-secondary');
+    btn.style.flex = '1';
+    btn.style.justifyContent = 'center';
+  });
+}
+
+const LB_IMAGE_PALETTES = {
+  dark: {
+    bg: '#07090f', bg2: '#0e1118', bg3: '#151924',
+    text: '#e6eaf5', text2: '#7e8aab', text3: '#47536e',
+    accent: '#00c9b1', blue: '#5b9cf6',
+    rankColors: ['#ffb830', '#9ca3af', '#cd7f32'],
+  },
+  light: {
+    bg: '#f2f5fc', bg2: '#ffffff', bg3: '#eaeff9',
+    text: '#0f172a', text2: '#546080', text3: '#6b7690',
+    accent: '#007f6f', blue: '#2e6fd4',
+    rankColors: ['#b87800', '#6b7280', '#92400e'],
+  },
+};
+
 function exportLeaderboardImage() {
   const lb = CH.getLeaderboard();
   const s = CH.getSettings();
   if (!lb.length) { toast('No leaderboard data yet', 'info'); return; }
 
+  const pal = LB_IMAGE_PALETTES[lbImageTheme] || LB_IMAGE_PALETTES.dark;
   const top = lb.slice(0, lbExportSize);
   const W = 600, ROW_H = 44, HEADER_H = 96, COL_H = 28, FOOTER_H = 40;
   const H = HEADER_H + COL_H + top.length * ROW_H + FOOTER_H;
@@ -351,20 +379,20 @@ function exportLeaderboardImage() {
   ctx.scale(2, 2);
 
   // Background
-  ctx.fillStyle = '#07090f';
+  ctx.fillStyle = pal.bg;
   ctx.fillRect(0, 0, W, H);
 
   // Top accent bar
   const barGrad = ctx.createLinearGradient(0, 0, W, 0);
-  barGrad.addColorStop(0, '#00c9b1'); barGrad.addColorStop(1, '#5b9cf6');
+  barGrad.addColorStop(0, pal.accent); barGrad.addColorStop(1, pal.blue);
   ctx.fillStyle = barGrad;
   ctx.fillRect(0, 0, W, 4);
 
   // Org name + title
-  ctx.fillStyle = '#e6eaf5';
+  ctx.fillStyle = pal.text;
   ctx.font = 'bold 20px Arial, sans-serif';
   ctx.fillText((s.orgName || 'CultureHub') + ' — Leaderboard', 24, 38);
-  ctx.fillStyle = '#7e8aab';
+  ctx.fillStyle = pal.text2;
   ctx.font = '12px Arial, sans-serif';
   ctx.fillText('Generated ' + new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }), 24, 58);
 
@@ -376,32 +404,32 @@ function exportLeaderboardImage() {
   ];
   stats.forEach((st, i) => {
     const x = 24 + i * 110;
-    ctx.fillStyle = '#151924';
+    ctx.fillStyle = pal.bg3;
     roundRect(ctx, x, 68, 100, 22, 4);
-    ctx.fillStyle = '#00c9b1';
+    ctx.fillStyle = pal.accent;
     ctx.font = 'bold 13px Arial';
     ctx.fillText(st.n, x + 8, 83);
-    ctx.fillStyle = '#7e8aab';
+    ctx.fillStyle = pal.text2;
     ctx.font = '10px Arial';
     ctx.fillText(st.l, x + 8 + ctx.measureText(st.n + ' ').width + 2, 83);
   });
 
   // Column header row
   const colY = HEADER_H;
-  ctx.fillStyle = '#0e1118';
+  ctx.fillStyle = pal.bg2;
   ctx.fillRect(0, colY, W, COL_H);
-  ctx.fillStyle = '#47536e';
+  ctx.fillStyle = pal.text3;
   ctx.font = '10px Arial';
   [['RANK', 18], ['NAME', 72], ['TEAM', 260], ['EVENTS', 390], ['WINS', 455], ['POINTS', 520]].forEach(([lbl, x]) => {
     ctx.fillText(lbl, x, colY + 18);
   });
 
   // Rows
-  const rankColors = ['#ffb830', '#9ca3af', '#cd7f32'];
+  const rankColors = pal.rankColors;
   const rankLabels = ['1ST', '2ND', '3RD'];
   top.forEach((entry, i) => {
     const y = HEADER_H + COL_H + i * ROW_H;
-    ctx.fillStyle = i % 2 === 0 ? '#0e1118' : '#07090f';
+    ctx.fillStyle = i % 2 === 0 ? pal.bg2 : pal.bg;
     ctx.fillRect(0, y, W, ROW_H);
     if (i < 3) {
       ctx.fillStyle = rankColors[i];
@@ -410,18 +438,18 @@ function exportLeaderboardImage() {
     const ty = y + ROW_H / 2 + 5;
 
     // Rank
-    ctx.fillStyle = i < 3 ? rankColors[i] : '#47536e';
+    ctx.fillStyle = i < 3 ? rankColors[i] : pal.text3;
     ctx.font = i < 3 ? 'bold 12px Arial' : '12px Arial';
     ctx.fillText(i < 3 ? rankLabels[i] : '#' + (i + 1), 18, ty);
 
     // Name
-    ctx.fillStyle = '#e6eaf5';
+    ctx.fillStyle = pal.text;
     ctx.font = 'bold 13px Arial';
     const name = entry.person.name.length > 22 ? entry.person.name.slice(0, 21) + '…' : entry.person.name;
     ctx.fillText(name, 72, ty);
 
     // Team
-    ctx.fillStyle = '#7e8aab';
+    ctx.fillStyle = pal.text2;
     ctx.font = '12px Arial';
     const team = (entry.person.team || '—').slice(0, 15);
     ctx.fillText(team, 260, ty);
@@ -433,23 +461,23 @@ function exportLeaderboardImage() {
     ctx.fillText(entry.wins, 468, ty);
 
     // Points
-    ctx.fillStyle = '#00c9b1';
+    ctx.fillStyle = pal.accent;
     ctx.font = 'bold 14px Arial';
     ctx.fillText(entry.points, 520, ty);
   });
 
   // Footer
   const footerY = HEADER_H + COL_H + top.length * ROW_H;
-  ctx.fillStyle = '#0e1118';
+  ctx.fillStyle = pal.bg2;
   ctx.fillRect(0, footerY, W, FOOTER_H);
-  ctx.fillStyle = '#47536e';
+  ctx.fillStyle = pal.text3;
   ctx.font = '11px Arial';
   ctx.fillText('CultureHub  ·  Office Culture Event Tracker', 24, footerY + 24);
   ctx.fillStyle = barGrad;
   ctx.fillRect(0, H - 4, W, 4);
 
   const link = document.createElement('a');
-  link.download = 'leaderboard-top' + lbExportSize + '-' + new Date().toISOString().slice(0, 10) + '.png';
+  link.download = 'leaderboard-top' + lbExportSize + '-' + lbImageTheme + '-' + new Date().toISOString().slice(0, 10) + '.png';
   link.href = canvas.toDataURL('image/png');
   link.click();
   toast('Leaderboard image saved!', 'success');
@@ -642,6 +670,13 @@ function render() {
             <div style="font-size:0.75rem;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Top N members</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap" id="lb-size-btns">
               ${[3,5,10,15,25].map(n => `<button class="btn btn-sm${n===10?' btn-primary':' btn-secondary'}" onclick="setLbSize(${n})" id="lb-size-${n}" style="min-width:44px;justify-content:center">${n}</button>`).join('')}
+            </div>
+          </div>
+          <div style="margin-bottom:14px">
+            <div style="font-size:0.75rem;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Image Theme</div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-sm btn-primary" onclick="setLbImageTheme('dark')" id="lb-theme-dark" style="flex:1;justify-content:center">🌙 Dark</button>
+              <button class="btn btn-sm btn-secondary" onclick="setLbImageTheme('light')" id="lb-theme-light" style="flex:1;justify-content:center">☀️ Light</button>
             </div>
           </div>
           <div style="display:flex;gap:8px">
