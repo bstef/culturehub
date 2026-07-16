@@ -272,22 +272,20 @@ html[data-theme="light"] .icon-dim  { transform: translateY(30px);  opacity: 0; 
 html[data-theme="light"] .icon-moon { transform: translateY(0);     opacity: 1; }
 
 /* ── Footer ───────────────────────────────────────────────────────── */
+.ch-footer, .ch-about-wrap {
+  max-width: 1400px; margin: 0 auto; padding-left: 36px; padding-right: 36px;
+}
 .ch-footer {
   display: flex; align-items: center; justify-content: center; gap: 16px;
   flex-wrap: wrap;
-  padding: 20px 36px 28px;
-  max-width: 1400px; margin: 0 auto;
+  padding-top: 20px; padding-bottom: 28px;
   font-size: 0.8rem; color: var(--text3);
   border-top: 1px solid var(--border);
 }
-.ch-footer a {
-  color: var(--text3); text-decoration: none; transition: color 0.15s ease;
+.ch-footer a, .ch-about-wrap a {
+  color: inherit; text-decoration: none; transition: color 0.15s ease;
 }
-.ch-footer a:hover { color: var(--accent); }
-
-.ch-about-wrap { max-width: 1400px; margin: 0 auto; padding: 0 36px; }
-.ch-about-wrap a { color: inherit; text-decoration: none; transition: color 0.15s ease; }
-.ch-about-wrap a:hover { color: var(--accent); }
+.ch-footer a:hover, .ch-about-wrap a:hover { color: var(--accent); }
 
 /* ── Page ─────────────────────────────────────────────────────────── */
 .page {
@@ -475,6 +473,8 @@ tbody td { padding: 14px 18px; font-size: 0.9rem; vertical-align: middle; line-h
 
 /* ── Grid ─────────────────────────────────────────────────────────── */
 .grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 24px; }
+.settings-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: stretch; }
+@media (max-width: 600px) { .settings-row { grid-template-columns: 1fr; } }
 .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; }
 .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 24px; }
 @media (max-width: 900px) { .grid-3,.grid-4 { grid-template-columns: repeat(2,1fr); } }

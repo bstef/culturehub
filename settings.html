@@ -612,7 +612,7 @@ function render() {
     <div style="display:flex;flex-direction:column;gap:24px">
 
       <!-- Row 1: Organization | Appearance -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:stretch">
+      <div class="settings-row">
         <!-- Organization settings -->
         <div class="card">
           <div class="card-title">🏢 Organization</div>
@@ -650,7 +650,7 @@ function render() {
       </div>
 
       <!-- Row 2: Data Summary | Leaderboard Export -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:stretch">
+      <div class="settings-row">
         <!-- Data overview -->
         <div class="card" style="display:flex;flex-direction:column">
           <div class="card-title">📊 Data Summary</div>
@@ -672,8 +672,7 @@ function render() {
               <div style="font-size:0.75rem;color:var(--text2);text-transform:uppercase">Storage Used</div>
             </div>
           </div>
-          <div style="flex:1"></div>
-          <div style="display:flex;gap:8px">
+          <div style="display:flex;gap:8px;margin-top:auto">
             <button class="btn btn-secondary" onclick="generateReport('overview')" style="flex:1;justify-content:center">📑 Full Report PDF</button>
           </div>
         </div>
@@ -706,15 +705,14 @@ function render() {
       </div>
 
       <!-- Row 3: Import from Team | Restore from Backup -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:stretch">
+      <div class="settings-row">
         <!-- Import Teams -->
         <div class="card" style="display:flex;flex-direction:column">
           <div class="card-title">👥 Import from Team</div>
           <p style="color:var(--text2);font-size:0.875rem;margin-bottom:16px">
             Import team members from a JSON file. Supports Microsoft Teams / Azure AD export format with <code style="color:var(--accent)">displayName</code>, <code style="color:var(--accent)">mail</code>, <code style="color:var(--accent)">department</code> fields.
           </p>
-          <div style="flex:1"></div>
-          <a href="roster.html" class="btn btn-secondary" style="width:100%;justify-content:center">
+          <a href="roster.html" class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:auto">
             📥 Go to Roster Import →
           </a>
         </div>
@@ -740,15 +738,14 @@ function render() {
       </div>
 
       <!-- Row 4: Backup Data | Demo & Testing -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:stretch">
+      <div class="settings-row">
         <!-- Backup / Export -->
         <div class="card" style="display:flex;flex-direction:column">
           <div class="card-title">💾 Backup Data</div>
           <p style="color:var(--text2);font-size:0.875rem;margin-bottom:16px">
             Download a complete JSON backup of all your data — people, events, attendance history, and gallery references.
           </p>
-          <div style="flex:1"></div>
-          <button class="btn btn-primary" onclick="CH.exportBackup()" style="width:100%;justify-content:center;margin-bottom:8px">
+          <button class="btn btn-primary" onclick="CH.exportBackup()" style="width:100%;justify-content:center;margin-bottom:8px;margin-top:auto">
             💾 Download Backup JSON
           </button>
           <p style="font-size:0.78rem;color:var(--text3)">Keep backups regularly. Data is stored in your browser's localStorage.</p>
@@ -782,7 +779,7 @@ function render() {
       </div>
 
       <!-- Danger Zone — full-width banner, pushed to the bottom -->
-      <div class="card" style="border-color:rgba(248,113,113,0.25);padding:36px 40px">
+      <div class="card" style="border-color:color-mix(in srgb, var(--red) 25%, transparent);padding:36px 40px">
         <div style="display:flex;align-items:center;gap:28px;flex-wrap:wrap">
           <div style="font-size:3rem;flex-shrink:0;line-height:1">⚠️</div>
           <div style="flex:1;min-width:280px">
